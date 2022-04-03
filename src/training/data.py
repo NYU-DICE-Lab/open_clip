@@ -33,12 +33,24 @@ except ImportError:
 
 from clip.openai_clip import tokenize
 
+def verify_replace_img(im_path, path):
+    "Confirm that `im_path` can be opened. if not, replace with noise"
+    try:
+        Image.open(im_path)
+    except:
+        print("found corrupted image at {}, generating dummy image.".format(im_path))
+        imarray = np.random.rand(224,224,3) * 255
+        namestr = "".join(str(c) for c in np.random.randint(10, size=16).tolist()) + ".png"
+        savepath = os.path.join(path, namestr)
+        im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
+        im.save(savepath)
+        im_path = savepath
+    return
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}.')
         df = pd.read_csv(input_filename, sep=sep)
-
         self.images = df[img_key].tolist()
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
@@ -48,7 +60,15 @@ class CsvDataset(Dataset):
         return len(self.captions)
 
     def __getitem__(self, idx):
-        images = self.transforms(Image.open(str(self.images[idx])))
+        path = os.path.join(os.getcwd(), "dummy")
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        str_img = str(self.images[idx])
+        for im_path in str_img:
+            verify_replace_img(im_path, path)
+        images = self.transforms(
+            Image.open(str_img)
+            )
         texts = tokenize([str(self.captions[idx])])[0]
         return images, texts
 
@@ -61,7 +81,6 @@ class DataInfo:
 
 def preprocess_txt(text):
     return tokenize([str(text)])[0]
-
 
 def get_dataset_size(shards):
     shards_list = list(braceexpand.braceexpand(shards))

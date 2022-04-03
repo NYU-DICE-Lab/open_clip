@@ -146,7 +146,7 @@ dependencies:
     - torch-geometric==1.7.0
     - wandb==0.10.30
     - wilds==1.1.0
-    - "--editable=git+https://github.com/tmbdev/webdataset.git@a4f3ec08551b42f20b20cdc1ba32d12536eabc15#egg=webdataset"
+    - git+https://github.com/tmbdev/webdataset.git@a4f3ec08551b42f20b20cdc1ba32d12536eabc15#egg=webdataset
     - git+https://github.com/modestyachts/ImageNetV2_pytorch
     - https://pytorch-geometric.com/whl/torch-1.7.0+cu110/torch_scatter-2.0.6-cp36-cp36m-linux_x86_64.whl
 prefix: /home/gamaga/anaconda3/envs/open_clip
