@@ -8,7 +8,11 @@ from contextlib import suppress
 import numpy as np
 import torch
 import torch.nn.functional as F
-import wandb
+
+try:
+    import wandb
+except ImportError:
+    wandb = None
 
 from open_clip import ClipLoss
 from .distributed import is_master
@@ -140,6 +144,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 if tb_writer is not None:
                     tb_writer.add_scalar(name, val, step)
                 if args.wandb:
+                    assert wandb is not None, 'Please install wandb.'
                     wandb.log({name: val, 'step': step})
 
             # resetting batch / data time meters per log window
@@ -233,6 +238,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             f.write("\n")
 
     if args.wandb:
+        assert wandb is not None, 'Please install wandb.'
         for name, val in metrics.items():
             wandb.log({f"val/{name}": val, 'epoch': epoch})
 

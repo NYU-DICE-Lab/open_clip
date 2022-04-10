@@ -32,6 +32,8 @@ We introduce three new command line arguments --
 
 # OpenCLIP
 
+[[Paper]](https://arxiv.org/abs/2109.01903) [[Colab]](https://colab.research.google.com/github/mlfoundations/open_clip/blob/master/docs/Interacting_with_open_clip.ipynb)
+
 Welcome to an open source implementation of OpenAI's [CLIP](https://arxiv.org/abs/2103.00020) (Contrastive Language-Image Pre-training). 
 
 The goal of this repository is to enable training models with contrastive image-text supervision, and to investigate their properties such as robustness to distribution shift. Our starting point is an implementation of CLIP that matches the accuracy of the original CLIP models when trained on the same dataset.
@@ -43,9 +45,40 @@ As we describe in more detail [below](#why-are-low-accuracy-clip-models-interest
 
 This codebase is work in progress, and we invite all to contribute in making it more acessible and useful. In the future, we plan to add support for TPU training and release larger models. We hope this codebase facilitates and promotes further research in contrastive image-text learning. Please submit an issue or send an email if you have any other requests or suggestions.
 
-Note that `src/clip` is a copy of OpenAI's official [repository](https://github.com/openai/CLIP) with minimal changes.
+Note that portions of `src/open_clip/` modelling and tokenizer code are adaptations of OpenAI's official [repository](https://github.com/openai/CLIP).
 
-#### Fine-tuning
+## Approach
+
+| ![CLIP](https://raw.githubusercontent.com/mlfoundations/open_clip/main/docs/CLIP.png) |
+|:--:|
+| Image Credit: https://github.com/openai/CLIP |
+
+## Usage
+
+```
+pip install open_clip_torch
+```
+
+```python
+import torch
+from PIL import Image
+import open_clip
+
+model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32')
+
+image = preprocess(Image.open("CLIP.png")).unsqueeze(0)
+text = open_clip.tokenize(["a diagram", "a dog", "a cat"])
+
+with torch.no_grad():
+    image_features = model.encode_image(image)
+    text_features = model.encode_text(text)
+
+    text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+
+print("Label probs:", text_probs)  # prints: [[1., 0., 0.]]
+```
+
+## Fine-tuning on classification tasks
 
 This repository is focused on training CLIP models. To fine-tune a *trained* zero-shot model on a downstream classification task such as ImageNet, please see [our other repository: WiSE-FT](https://github.com/mlfoundations/wise-ft). The [WiSE-FT repository](https://github.com/mlfoundations/wise-ft) contains code for our paper on [Robust Fine-tuning of Zero-shot Models](https://arxiv.org/abs/2109.01903), in which we introduce a technique for fine-tuning zero-shot models while preserving robustness under distribution shift.
 
@@ -76,7 +109,9 @@ The indices of images in this subset are in [OpenAI's CLIP repository](https://g
 
 ## Training CLIP
 
-### Install dependencies
+### Setup Environment and Install dependencies
+
+#### Conda
 
 ```bash
 # Create a conda environment (heavily recommended)
@@ -84,18 +119,35 @@ conda create -n open_clip python=3.10
 conda activate open_clip
 ```
 
-### Add directory to pythonpath:
+Install conda PyTorch as per https://pytorch.org/get-started/locally/
+
+#### Virtualenv
+
+openclip also can be used with virtualenv with these lines:
+```
+python3 -m venv .env
+source .env/bin/activate
+pip install -U pip
+make install
+```
+
+Install pip PyTorch as per https://pytorch.org/get-started/locally/
+
+Test can be run with `make install-dev` then `make test`
+
+#### Other dependencies
+
+Install open_clip pacakge and remaining dependencies:
 
 ```bash
 cd open_clip
 python setup.py install
 ```
 
-
 ### Sample single-process running code:
 
 ```bash
-nohup python -u src/training/main.py \
+python -m training.main \
     --save-frequency 1 \
     --zeroshot-frequency 1 \
     --report-to tensorboard \
@@ -116,7 +168,7 @@ nohup python -u src/training/main.py \
 Note: `imagenet-val` is the path to the *validation* set of ImageNet for zero-shot evaluation, not the training set!
 You can remove this argument if you do not want to perform zero-shot evaluation on ImageNet throughout training. Note that the `val` folder should contain subfolders. If it doest not, please use [this script](https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/valprep.sh).
 
-## Multi-GPU and Beyond
+### Multi-GPU and Beyond
 
 This code has been battle tested up to 1024 A100s and offers a variety of solutions
 for distributed training. We include native support for SLURM clusters.
@@ -127,7 +179,7 @@ the the logit matrix. Using a naïve all-gather scheme, space complexity will be
 `--gather-with-grad` and `--local-loss` are used. This alteration results in one-to-one
 numerical results as the naïve method.
 
-### Single-Node
+#### Single-Node
 
 We make use of `torchrun` to launch distributed jobs. The following launches a
 a job on a node of 4 GPUs:
@@ -144,7 +196,7 @@ torchrun --nproc_per_node 4 -m training.main \
     --imagenet-val /data/imagenet/validation/
 ```
 
-### Multi-Node
+#### Multi-Node
 
 The same script above works, so long as users include information about the number
 of nodes and host node.
@@ -163,7 +215,7 @@ torchrun --nproc_per_node=4 \
     --imagenet-val /data/imagenet/validation/
 ```
 
-### SLURM
+#### SLURM
 
 This is likely the easist solution to utilize. The following script was used to
 train our largest models:
@@ -202,11 +254,20 @@ srun --cpu_bind=none,v --accel-bind=gn python -u src/training/main.py \
     --gather-with-grad
 ```
 
-## Loss Curves
+### Resuming from a checkpoint:
+
+```bash
+python -m training.main \
+    --train-data="/path/to/train_data.csv" \
+    --val-data="/path/to/validation_data.csv"  \
+    --resume /path/to/checkpoints/epoch_K.pt
+```
+
+### Loss Curves
 
 When run on a machine with 8 GPUs the command should produce the following training curve for Conceptual Captions:
 
-![CLIP zero shot training curve](/docs/clip_zeroshot.png)
+![CLIP zero shot training curve](https://raw.githubusercontent.com/mlfoundations/open_clip/main/docs/clip_zeroshot.png)
 
 More detailed curves for Conceptual Captions are given at [/docs/clip_conceptual_captions.md](/docs/clip_conceptual_captions.md).
 
@@ -219,46 +280,39 @@ Note that to use another model, like `ViT-B/32` or `RN50x4` or `RN50x16` or `ViT
 tensorboard --logdir=logs/tensorboard/ --port=7777
 ```
 
-### Sample resuming from a checkpoint:
+## Evaluation / Zero-Shot
+
+### Evaluating local checkpoint:
 
 ```bash
-python src/training/main.py \
-    --train-data="/path/to/train_data.csv" \
-    --val-data="/path/to/validation_data.csv"  \
-    --resume /path/to/checkpoints/epoch_K.pt
-```
-
-### Sample evaluating local checkpoint:
-
-```bash
-python src/training/main.py \
+python -m training.main \
     --val-data="/path/to/validation_data.csv"  \
     --model RN101 \
     --preretrained /path/to/checkpoints/epoch_K.pt
 ```
 
-### Sample evaluating hosted pretrained checkpoint on ImageNet zero-shot prediction:
+### Evaluating hosted pretrained checkpoint on ImageNet zero-shot prediction:
 
 ```bash
-python src/training/main.py \
+python -m training.main \
     --imagenet-val /path/to/imagenet/validation \
     --model ViT-B-32-quickgelu \
     --preretrained laion400m_e32
 ```
 
-## Trained models
+## Pretrained models
 
 We replicate OpenAI's results on ViT-B/32 with comparable dataset LAION-400M. Trained
 weights may be found in release [v0.2](https://github.com/mlfoundations/open_clip/releases/tag/v0.2-weights).
 
-<img src="docs/laion_clip_zeroshot.png" width="700">
+<img src="https://raw.githubusercontent.com/mlfoundations/open_clip/main/docs/laion_clip_zeroshot.png" width="700">
 
 Below are checkpoints of models trained on YFCC-15M, along with their zero-shot top-1 accuracies on ImageNet and ImageNetV2. These models were trained using 8 GPUs and the same hyperparameters described in the "Sample running code" section, with the exception of `lr=5e-4` and `epochs=32`.
 
 * [ResNet-50](https://drive.google.com/file/d/1bbNMrWAq3NxCAteHmbrYgBKpGAA9j9pn/view?usp=sharing) (32.7% / 27.9%)
 * [ResNet-101](https://drive.google.com/file/d/1vOorR3pKkuuA_Gv7OgqMtaETNjTmy_3m/view?usp=sharing) (34.8% / 30.0%)
 
-## Pretrained Model Interface
+### Pretrained Model Interface
 
 We offer a simple model interface to instantiate both pre-trained and untrained models.
 
@@ -299,7 +353,7 @@ Future trained models will use nn.GELU.
 
 The plot below shows how zero-shot performance of CLIP models varies as we scale the number of samples used for training. Zero-shot performance increases steadily for both ImageNet and [ImageNetV2](https://arxiv.org/abs/1902.10811), and is far from saturated at ~15M samples.
 
-<img src="docs/scaling.png" width="700">
+<img src="https://raw.githubusercontent.com/mlfoundations/open_clip/main/docs/scaling.png" width="700">
 
 ## Why are low-accuracy CLIP models interesting?
 
@@ -311,7 +365,7 @@ and [ImageNetV2](https://arxiv.org/abs/1902.10811) (a reproduction of the ImageN
 Standard training denotes training on the ImageNet train set and the CLIP zero-shot models
 are shown as stars.
 
-![CLIP scatter plot](/docs/effective_robustness.png)
+![CLIP scatter plot](https://raw.githubusercontent.com/mlfoundations/open_clip/main/docs/effective_robustness.png)
 
 As observed by [Taori et al., 2020](https://arxiv.org/abs/2007.00644) and [Miller et al., 2021](https://arxiv.org/abs/2107.04649), the in-distribution
 and out-of-distribution accuracies of models trained on ImageNet follow a predictable linear trend (the red line in the above plot). *Effective robustness*
