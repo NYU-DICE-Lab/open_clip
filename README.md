@@ -14,9 +14,9 @@ Unlike gradient accumulation, gradient caching is mathematically identical to tr
 
 1. git clone this repo and enter the directory using your favorite terminal
 2. conda env create --file environment.yml
-3. conda activate open_clip
-4. pip install torch==1.9.0+cu111 torchvision torchaudio -f https://download.pytorch.org/whl/cu111/torch_stable.html
-5. pip install git+https://github.com/modestyachts/ImageNetV2_pytorch
+3. conda activate open_clip_gc
+4. pip3 install torch torchvision torchaudio --upgrade --extra-index-url https://download.pytorch.org/whl/cu113
+5. pip3 install git+https://github.com/modestyachts/ImageNetV2_pytorch
 6. python setup.py install
 7. export PYTHONPATH="$PYTHONPATH:$PWD/src"
 
