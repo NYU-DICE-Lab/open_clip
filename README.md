@@ -1,6 +1,6 @@
 # OpenCLIP with Gradient Caching
 
-This repo modifies the OpenCLIP repo and adds support for gradient caching. The gradient caching implemententation is adapted from [GradCache](https://github.com/luyug/GradCache).
+This repo modifies the OpenCLIP repo and adds support for gradient caching. The gradient caching implemententation is adapted from [GradCache](https://github.com/luyug/GradCache). Their work applied gradient caching to Dense Passage Retrieval models in the NLP space. Our work extends their approach to support OpenCLIP, and can easily be adapted to support other vision-language models as well.
 
 ## Why gradient caching?
 
@@ -8,7 +8,11 @@ Models like CLIP are typically trained with very large batch sizes -- 32,768 is 
 
 However, most researchers and even most businesses do not have access to the distributed training setups required for such batch sizes. Gradient caching saves computed gradients in RAM instead of in VRAM, allowing for much larger batch sizes on a single node.
 
-Unlike gradient accumulation, gradient caching is mathematically identical to training with a large batch size. 
+### What about gradient accumulation?
+
+Unfortunately, the gradient accumulation technique, splitting a large batch into chunks and summing gradients across several backwards, cannot emulate a large batch as each smaller chunk has fewer in-batch negatives. (https://arxiv.org/pdf/2101.06983.pdf)
+
+Unlike gradient accumulation, gradient caching is mathematically identical to distributing the batch across multiple GPUs.  
 
 ## Installation
 
