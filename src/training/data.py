@@ -37,7 +37,7 @@ try:
     nltk.download('punkt')
     nltk.download('averaged_perceptron_tagger')
     nltk.download('tagsets')
-    # regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+')
+    from nltk.corpus import stopwords, wordnet
     lemmatizer = nltk.stem.WordNetLemmatizer()
 
 except:
@@ -45,32 +45,79 @@ except:
 
 from open_clip import tokenize
 
-from .imagenet_zeroshot_data import imagenet_classnames, imagenet_r_classnames, imagenet_a_classnames, openai_imagenet_template
+from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template
+
+imagenet_classnames = get_imagenet_classnames()
+
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
     from .cars_zeroshot_data import cars_classnames, cars_template
     from .flowers_zeroshot_data import flowers_classnames, flowers_template
     from .food_zeroshot_data import food_classnames, food_template
     from .air_zeroshot_data import air_classnames, air_template
+
 except Exception as e:
     print(e)
 
+cipher_dict = {
+    'a': '@^',
+    'b': '#^',
+    'c': '$^',
+    'd': '%^',
+    'e': '@&',
+    'f': '#&',
+    'g': '$&',
+    'h': '%&',
+    'i': '@*',
+    'j': '#*',
+    'k': '$*',
+    'l': '%*',
+    'm': '@(',
+    'n': '#(',
+    'o': '$(',
+    'p': '%(',
+    'q': '@)',
+    'r': '#)',
+    's': '$)',
+    't': '%)',
+    'u': '@+',
+    'v': '#+',
+    'w': '$+',
+    'x': '%+',
+    'y': '@=',
+    'z': '#=',
+    ' ': ' ',
+    '\'': '\'',
+    ',': ',',
+    '.': '.',
+    '!': '!',
+    '?': '?',
+}
+
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
+        if dscipher:
+            csvcleaned=True
         if csvcleaned:
             logging.debug("cleaning captions")
             df.loc[:, caption_key] = df.title.progress_apply(clean_captions)
-            logging.debug("done cleaning captions")
+            logging.debug("Done.")
             logging.debug(df.head())
-        if csvfilter != "":
+        if dscipher or simplecaptions:
+            logging.debug('Filtering and enciphering captions. Original dataset size is {}'.format(len(df)))
+            df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict)
+            logging.debug(df['title'].head())
+            df = df[df['title'].str.len() > 0]
+            logging.debug("Done. Length is now {}".format(len(df)))
+            logging.debug(df.head())            
+        elif csvfilter != "":
             logging.debug('Filtering captions. Original dataset size is {}'.format(len(df)))
-            logging.debug("filtering captions")
-            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter)
+            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=False, simplecaptions=False, strict=strict)
             logging.debug(df['is_synset'].head())
             df = df[df['is_synset']].drop(columns=['is_synset'])
-            logging.debug("done cleaning captions, length is now {}".format(len(df)))
+            logging.debug("Done. Length is now {}".format(len(df)))
             logging.debug(df.head())
         self.images = df[img_key].tolist()
         self.captions = df[caption_key].tolist()
@@ -86,9 +133,7 @@ class CsvDataset(Dataset):
             images = self.transforms(Image.open(str(self.images[idx])))
             texts = str(self.captions[idx])
             if self.scrambled:
-                tlist = texts.split(" ")
-                random.shuffle(tlist)
-                texts = " ".join(tlist).strip()
+                texts = scramble_txt(texts)
             texts = tokenize(texts)[0]
         except Exception as e:
             logging.debug("Missing or unreadable image at {}, generating dummy image and caption.".format(str(self.images[idx])))
@@ -125,17 +170,42 @@ class DataInfo:
 
 
 def preprocess_txt(text):
-    text = str(text)
-    # if args.csv_cleaned:
-    #     text = clean_captions(text)
-    # if args.csv_scrambled:
-    #     tlist = text.split(" ")
-    #     random.shuffle(tlist)
-    #     text = " ".join(tlist).strip()
-    # if args.ds_filter != "":
-    #     if not synset_ds(texts, 3, args.ds_filter):
-    #         texts = "NONE"
-    return tokenize([text])[0]
+    try:
+        text = str(text)
+        return tokenize([text])[0]
+    except Exception as e:
+        print(e)
+        return ""
+
+def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict):
+    try:
+        text = clean_captions(str(text))
+        if ds != "":
+            if dscipher and simplecaptions:
+                text = synset_ds(text, 3, ds, True, True, strict)
+            elif dscipher:
+                text = synset_ds(text, 3, ds, True, False, strict)
+            elif simplecaptions:
+                text = synset_ds(text, 3, ds, False, True, strict)
+            elif synset_ds(text, 3, ds, False, False, strict):
+                text = text
+                if scrambled:
+                    text = scramble_txt(text)
+            else:
+                text = ""
+        #logging.debug("leaving filter_preprocess")
+        #logging.debug(text)
+        return text
+    except Exception as e:
+        print("in filter preprocess: ")
+        print(e)
+        return ""
+
+def scramble_txt(text):
+    tlist = text.split(" ")
+    random.shuffle(tlist)
+    text = " ".join(tlist).strip()   
+    return text 
 
 """
 Synset builder
@@ -143,32 +213,74 @@ Synset builder
 Dataset argument expects a list of class names as strings -- any dataset can be used
 Strict follows the methodology of Fang et al ... multiple matches -> no match
 nva uses parts of speech for all of wordnet, instead of matching on some list from a dataset
+WARNING: can return string or bool, depending on arguments provided
 """
 
-def synset_ds(s, ngram=3, ds=None):
+def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False):
     try:
+        flag = False
         s = [lemmatizer.lemmatize(t) for t in s.split(" ")]
+        # logging.debug('s is now {}'.format(s))
+        str_s = " ".join(w for w in s)
+        # logging.debug('str_s is now {}'.format(str_s))
         for count, word in enumerate(s):
+            if strict and flag:
+                break
             grams = []
             for i in range(ngram):
                 if count + i - 1 > len(s):
                     continue
-                grams.append(" ".join(w for w in s[count:count+i+1]))
+                gram = " ".join(w for w in s[count:count+i+1] if len(w) > 2)
+                grams.append(gram)
             for i, gram in enumerate(grams):
-                if gram in ds:
-                    return True
-        return False
+                if strict and flag:
+                    break
+                gram_t = gram
+                if cipher:
+                    k = ""
+                    for c in gram:
+                        nextc = cipher_dict.get(c) or c
+                        k = k + nextc
+                    gram_t = k
+                if ds and gram_t in ds:
+                    # logging.debug("k is now {}".format(k))
+                    if simplecaptions and not flag:
+                        str_s = "An image of " + gram_t
+                    elif simplecaptions and flag and str_s.find(gram) == -1:
+                        str_s += " {}".format(gram)
+                    flag = True
+                    if cipher:
+                        # logging.debug("str_s before cipher replacement: {}".format(str_s))
+                        str_s = str_s.replace(gram, k)
+                        # logging.debug("str_s after cipher replacement: {}".format(str_s))
+                elif simplecaptions and not ds:
+                    d = wordnet.synsets(gram)
+                    if d in stopwords.words('english'):
+                        continue
+                    elif d and not flag:
+                        str_s = "An image of " + gram
+                    elif d and str_s.find(gram) == -1:
+                        str_s += " {}".format(gram)
+                    flag=True
+    
+        if cipher or simplecaptions:
+            if not flag:
+                str_s = ""
+            logging.debug("Returning {}".format(str_s))
+            return str_s
+        return flag
     except Exception as e:
+        print("Exception in synset ds: ")
         print(e)
         return []
 
 def clean_captions(x):
     try:
-        return x.lower().translate({ord(i): None for i in '&@/:\'\©#)("'}).translate({ord(i): " " for i in '-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "")
+        return x.lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "").strip()
     except Exception as e:
+        print("in clean captions: ")
         print(e)
         return ""
-        # return tokenize("NONE")[0]
 
 def get_dataset_size(shards):
     shards_list = list(braceexpand.braceexpand(shards))
@@ -190,16 +302,6 @@ def get_dataset_size(shards):
         # LAION-2B (english): 2170337258
     num_shards = len(shards_list)
     return total_size, num_shards
-
-def NoneHandler(batch, dataset):
-    len_batch = len(batch) # original batch length
-    batch = list(filter (lambda x:x is not None, batch)) # filter out all the Nones
-    if len_batch > len(batch): # source all the required samples from the original dataset at random
-        diff = len_batch - len(batch)
-        for i in range(diff):
-            batch.append(dataset[np.random.randint(0, len(dataset))])
-    # logging.debug("collate_fn returned batch: {}".format(batch))
-    return torch.utils.data.dataloader.default_collate(batch)
 
 def get_imagenet(args, preprocess_fns, split):
     assert split in ["train", "val", "v2", "r", "a", "s"]
@@ -247,8 +349,6 @@ def get_imagenet(args, preprocess_fns, split):
         batch_size=args.batch_size,
         num_workers=args.workers,
         sampler=sampler
-        #sampler=sampler,
-        #collate_fn=partial(NoneHandler, dataset=dataset)
     )
 
     return DataInfo(dataloader=dataloader, sampler=sampler)
@@ -258,33 +358,31 @@ def get_torchvision(args, preprocess_fns, ds):
     preprocess_fn = preprocess_val
     if ds == "stanfordcars":
         data_path = args.stanfordcars
-        dataset = datasets.StanfordCars(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+        dataset = datasets.StanfordCars(root = data_path, split = 'test', transform = preprocess_fn, download = False)
     elif ds == "flowers":
         data_path = args.flowers
-        dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+        dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = False)
     elif ds == "air":
         data_path = args.air
-        dataset = datasets.FGVCAircraft(root=data_path, split = 'val', annotation_level = 'family', transform = preprocess_fn, download = True)
+        dataset = datasets.FGVCAircraft(root=data_path, split = 'val', annotation_level = 'family', transform = preprocess_fn, download = False)
     elif ds == "food":
         data_path = args.food
-        dataset = datasets.Food101(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+        dataset = datasets.Food101(root = data_path, split = 'test', transform = preprocess_fn, download = False)
     elif ds == "inat2021":
         data_path = args.inat2021
-        dataset = datasets.INaturalist(root = data_path, version = "2021_valid", transform = preprocess_fn, download = True)
+        dataset = datasets.INaturalist(root = data_path, version = "2021_valid", transform = preprocess_fn, download = False)
     elif ds == "inat2018":
         data_path = args.inat2018
-        dataset = datasets.INaturalist(root = data_path, version = "2018", transform = preprocess_fn, download = True)
+        dataset = datasets.INaturalist(root = data_path, version = "2018", transform = preprocess_fn, download = False)
     elif ds == "inat2017":
         data_path = args.inat2017
-        dataset = datasets.INaturalist(root = data_path, version = "2017", transform = preprocess_fn, download = True)
+        dataset = datasets.INaturalist(root = data_path, version = "2017", transform = preprocess_fn, download = False)
     sampler = None
     dataloader = torch.utils.data.DataLoader(
     dataset,
         batch_size=args.batch_size,
         num_workers=args.workers,
         sampler=sampler
-        #sampler=sampler,
-        #collate_fn=partial(NoneHandler, dataset=dataset)
     )
 
     return DataInfo(dataloader, sampler)
@@ -302,6 +400,8 @@ def count_samples(dataloader):
 def filter_no_caption(sample):
     return 'txt' in sample
 
+def filter_no_caption_text(sample):
+    return sample["text"] != ""
 
 def log_and_continue(exn):
     """Call in an exception handler to ignore any exception, isssue a warning, and continue."""
@@ -452,9 +552,11 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
     if resampled:
         pipeline = [ResampledShards2(input_shards, deterministic=True, epoch=shared_epoch)]
     else:
-        pipeline = [wds.SimpleShardList(input_shards)]
+        shl = wds.SimpleShardList(input_shards)
+        pipeline = [shl]
 
     # at this point we have an iterator over all the shards
+    logging.debug("get_wds_dataset, is_train")
     if is_train:
         if not resampled:
             pipeline.extend([
@@ -485,11 +587,21 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.select(filter_no_caption),
         wds.decode("pilrgb", handler=log_and_continue),
         wds.rename(image="jpg;png", text="txt"),
+    ])
+    if args.ds_filter != "" or args.csv_scrambled:
+        logging.debug("get_wds_dataset, filtering")
+        pipeline.extend([
+            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict)),
+            #wds.map_dict(text=partial(filter_preprocess_txt, args.ds_filter, args.csv_scrambled)),
+            wds.select(filter_no_caption_text),
+        ])
+    pipeline.extend([
         wds.map_dict(image=preprocess_img, text=preprocess_txt),
         wds.to_tuple("image", "text"),
-        wds.batched(args.batch_size, partial=not is_train),
+        wds.batched(args.batch_size, partial=args.ds_filter != "" or not is_train)
     ])
     dataset = wds.DataPipeline(*pipeline)
+    logging.debug("get_wds_dataset, pipeline assembled")
     if is_train:
         if not resampled:
             assert num_shards >= args.workers * args.world_size, 'number of shards must be >= total workers'
@@ -549,9 +661,12 @@ def my_collate(batch):
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
-    if args.ds_filter != "":
+    if args.ds_cipher:
+        args.ds_filter = imagenet_cipher
+    elif args.ds_filter != "":
         var_names = globals()
         args.ds_filter = var_names[args.ds_filter]
+        args.ds_filter = [clean_captions(a) for a in args.ds_filter]
     dataset = CsvDataset(
         input_filename,
         preprocess_fn,
@@ -560,6 +675,9 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
         csvfilter=args.ds_filter,
         csvscrambled=args.csv_scrambled,
         csvcleaned=args.csv_cleaned,
+        dscipher=args.ds_cipher,
+        simplecaptions=args.simplecaptions,
+        strict=args.strict,
         sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None

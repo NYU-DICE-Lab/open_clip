@@ -40,7 +40,7 @@ def random_seed(seed=42, rank=0):
 
 def main():
     args = parse_args()
-
+    eval_datasets = ['val', 'imagenet-val', 'imagenet-v2', 'inat2021', 'stanfordcars', 'imagenet-s', 'imagenet-r', 'imagenet-a', 'flowers', 'air', 'food']
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace('/', '-')
 
@@ -267,7 +267,7 @@ def main():
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
-        if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2', 'inat2021', 'stanfordcars')):
+        if any(v in data for v in eval_datasets):
             evaluate(model, data, completed_epoch, args, writer)
 
         # Saving checkpoints.

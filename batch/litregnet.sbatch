@@ -3,7 +3,7 @@
 #SBATCH --output=litregnet_%j.log
 #SBATCH --nodes=4
 #SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
 #SBATCH --mem=128GB
 #SBATCH --gres=gpu:mi50:8
@@ -11,6 +11,8 @@
 #SBATCH --job-name=lit_regnetx_320_laion400m_4node_b384
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
+#SBATCH --dependency=afterany:22042036
+#SBATCH --dependency=afterany:22044929
 
 module purge;
 
@@ -31,5 +33,5 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity-rocm.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 400000000 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --warmup 2000 --batch-size=384 --wd=0.1 --epochs=32 --workers=2 --model=timm-regnetx_320 --pretrained-image --lock-image --seed 0 --resume "/scratch/bf996/open_clip/logs/2022_06_26-05_54_37-model_timm-regnetx_320-lr_0.0005-b_384-j_4-p_amp/checkpoints/epoch_4.pt" --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --warmup 2000 --batch-size=256 --wd=0.1 --epochs=4 --workers=4 --model=timm-regnetx_320 --pretrained-image --lock-image --local-loss --gather-with-grad'
 

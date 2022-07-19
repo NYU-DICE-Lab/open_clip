@@ -18,6 +18,7 @@ mkdir -p $tmp
 singularity \
     exec --rocm \
     --bind $tmp:$HOME/.config/miopen \
+  $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_rocm.ext3:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/hudson/images/rocm4.5.2-ubuntu20.04.3.sif \

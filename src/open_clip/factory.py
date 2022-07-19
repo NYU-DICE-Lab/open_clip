@@ -118,6 +118,8 @@ def create_model(
             text_enc_depth = 6,
             text_seq_len = 256,
             text_heads = 8,
+            text_has_cls_token = not filip,
+            visual_has_cls_token = not filip,
             use_all_token_embeds = filip,           # whether to use fine-grained contrastive learning (FILIP)
             decoupled_contrastive_learning = dcl,  # use decoupled contrastive learning (DCL) objective function, removing positive pairs from the denominator of the InfoNCE loss (CLOOB + DCL)
             extra_latent_projection = elp,         # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)
@@ -127,27 +129,6 @@ def create_model(
             text_ssl_loss_weight = 0.05,            # weight for text MLM loss
             image_ssl_loss_weight = 0.05            # weight for image self-supervised learning loss
         )
-        # model = XCLIP(
-        #     dim_text = 512,
-        #     dim_image = 512,
-        #     dim_latent = 512,
-        #     num_text_tokens = 49408,
-        #     text_enc_depth = 6,
-        #     text_seq_len = 224,
-        #     text_heads = 8,
-        #     visual_enc_depth = 6,
-        #     visual_image_size = 224,
-        #     visual_patch_size = 28,
-        #     visual_heads = 8,
-        #     use_all_token_embeds = filip,           # whether to use fine-grained contrastive learning (FILIP)
-        #     decoupled_contrastive_learning = dcl,  # use decoupled contrastive learning (DCL) objective function, removing positive pairs from the denominator of the InfoNCE loss (CLOOB + DCL)
-        #     extra_latent_projection = elp,         # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)
-        #     use_visual_ssl = vssl,                  # whether to do self supervised learning on iages
-        #     use_mlm = mlm,                        # use masked language learning (MLM) on text (DeCLIP)
-        #     #TODO: input correct vals here
-        #     text_ssl_loss_weight = 0.05,            # weight for text MLM loss
-        #     image_ssl_loss_weight = 0.05            # weight for image self-supervised learning loss
-        # )
         if precision == "amp" or precision == "fp32":
             model = model.float()
         if precision == "fp16":

@@ -67,10 +67,40 @@ def parse_args():
         help="Filter to only include samples in the batch whose captions contain a word in the filter list: options are ['imagenet_classnames', 'inat_classnames', 'cars_classnames', 'flowers_classnames', 'food_classnames', 'air_classnames']."
     )
     parser.add_argument(
+        "--strict",
+        type=bool,
+        default=False,
+        help="Strict filtering"
+    )
+    parser.add_argument(
+        "--ds-cipher",
+        type=bool,
+        default=False,
+        help="Filter to only include samples in the batch whose captions contain an ImageNet1k class, and encode those classes using a substitution cipher: caption cleaning required."
+    )
+    parser.add_argument(
+        "--simplecaptions",
+        type=bool,
+        default=False,
+        help="Change caption text to 'An image of CLASSNAME, CLASSNAME': class filtering required."
+    )
+    parser.add_argument(
         "--csv-scrambled",
         type=bool,
         default=False,
         help="Scramble word ordering of captions during training"
+    )
+    parser.add_argument(
+        "--zs-upper",
+        type=bool,
+        default=False,
+        help="Force classes to UPPER-CASE during inference"
+    )
+    parser.add_argument(
+        "--zs-lower",
+        type=bool,
+        default=False,
+        help="Force classes to lower-case during inference"
     )
     parser.add_argument(
         "--csv-cleaned",
@@ -391,7 +421,7 @@ def parse_args():
     parser.add_argument(
         "--vssl",
         default=False,
-        help="whether to do self supervised learning on iages",
+        help="whether to do self supervised learning on images",
     )
     parser.add_argument(
         "--mlm",

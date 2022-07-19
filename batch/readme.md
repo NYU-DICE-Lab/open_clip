@@ -36,6 +36,32 @@ You will need to sync this repo to your scratch directory prior to first run. Al
 
 Please be sure to replace any PATH variables as appropriate for your particular environment.
 
+## Interactive, single-node jobs
+
+For interactive srun jobs intended to be run multi-GPU, single-node, the syntax is considerably different than it is for SLURM.
+
+the syntax for SLURM and torchrun is pretty different, so it won't work to try to reuse the SLURM commands. Instead:
+
+1. Set your WORLD_SIZE, OMP_NUM_THREADS, MASTER_ADDR and MASTER_PORT environment variables (see the batch scripts in our repo for examples). Then, export SLURM_NTASKS=$WORLD_SIZE.
+
+2. Launch a Singularity instance with the appropriate datasets mounted and available, navigate to your open_clip directory
+3. Run the following command (modify nproc_per_node as needed)
+
+```
+torchrun --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT --nnodes=1 --nproc_per_node=4 -m training.main *ARGS
+```
+
+If you run into trouble with the master address or ports, try re-running the command and see whether you get a different port the next time, or try fixing the port to a particular number (try the 50010 -> 50100 range).
+
+This can be run from an interactive session in Greene using srun
+
+```
+srun --nodes=1 --cpus-per-task=8 --mem=128GB --gres=gpu:4 --time=47:59:00 --pty /bin/bash
+```
+
+* Run in tmux to avoid losing your job if your internet disconnects
+* You may need to reset your MASTER_PORT in-between jobs if you cancel jobs in the middle or if they fail
+
 ## GPUs
 
 ### AMD
@@ -112,7 +138,7 @@ VRAM may be anywhere from 16GB to 40GB, depending on which cards you request or 
 $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
 
 # OPENCLIP
---train-data="PATH/TO/yfcc-small-metadata.csv" \
+--train-data="/vast/work/public/ml-datasets/yfcc15m/yfcc-small-metadata.csv" \
 --csv-separator "," \
 ```
 

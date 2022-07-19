@@ -11,6 +11,8 @@
 #SBATCH --job-name=lit_tf_efficientnetv2_xl_in21ft1k_cc12m_1node_b256
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
+#SBATCH --dependency=afterany:22042036
+#SBATCH --dependency=afterany:22044929
 
 module purge;
 
@@ -18,6 +20,7 @@ module purge;
 echo $SLURM_JOB_NAME
 
 #env vars
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK;
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
 echo "WORLD_SIZE="$WORLD_SIZE

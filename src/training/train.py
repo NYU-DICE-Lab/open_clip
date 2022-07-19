@@ -4,6 +4,8 @@ import math
 import os
 import time
 from contextlib import suppress
+from itertools import chain
+import random
 
 import numpy as np
 import torch
@@ -92,9 +94,15 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 scaler=scaler
             )
 
+    batchset = list()
+
     for i, batch in enumerate(dataloader):
-        # logging.info("batch contents: ")
-        # logging.info(batch[1])
+        if args.ds_filter and args.debug:
+            for b in batch[1].tolist():
+                if b not in batchset:
+                    batchset.append(b)
+                logging.debug("The model has seen {} unique samples".format(len(batchset)))
+        # logging.info(random.sample(batchset, 10))
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
         images, texts = batch
@@ -171,10 +179,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             # NOTE loss is coarsely sampled, just master node and per log update
             loss_m.update(total_loss.item(), batch_size)
             if np.isnan(loss_m.val):
-                logging.info("NaN loss in logging function on iteration {}".format(i))
-                logging.info("FEATURES: ")
-                logging.info(image_features)
-                logging.info(text_features)
+                logging.debug("NaN loss in logging function on iteration {}".format(i))
             if args.model in ["coca", "xclip"]:
                 logit_scale = torch.tensor([1.0])
             if not args.gc:
