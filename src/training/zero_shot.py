@@ -7,9 +7,11 @@ from torch import einsum
 import torch.nn.functional as F
 from tqdm import tqdm
 
+import numpy as np
+
 from open_clip import tokenize
 
-from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template
+from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx
 
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
@@ -81,12 +83,18 @@ def accuracy(output, target, topk=(1,)):
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
 
-def run(model, classifier, dataloader, args):
+def run(model, classifier, dataloader, args, idx=None):
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
             images = images.to(args.device)
+            try:
+                s = idx.shape
+                target = target.tolist()
+                target = torch.tensor(idx[target])
+            except:
+                pass
             target = target.to(args.device)
             #FIXME: handle larger batch sizes gracefully with gradient caching
             if args.gc:
@@ -95,7 +103,9 @@ def run(model, classifier, dataloader, args):
             with autocast():
                 # predict
                 if args.distributed and not args.horovod:
-                    if args.model == "coca":
+                    if args.linear_probe:
+                        logits = model(image_features)
+                    elif args.model == "coca":
                         texts = torch.randint(100, (5, len(images))).to(args.device)
                         image_features = model.module(texts, images, return_embeddings=True)
                         image_features = F.normalize(image_features[1], dim=-1)
@@ -110,7 +120,9 @@ def run(model, classifier, dataloader, args):
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
                 else:
-                    if args.model == "coca":
+                    if args.linear_probe:
+                        logits = model(images)
+                    elif args.model == "coca":
                         texts = torch.randint(100, (5, len(images))).to(args.device)
                         image_features = model(texts, images, return_embeddings=True)
                         image_features = F.normalize(image_features[1], dim=-1)
@@ -126,7 +138,7 @@ def run(model, classifier, dataloader, args):
                         logits = 100. * image_features @ classifier
 
             # measure accuracy
-            logging.debug("size of logits: {}, size of target: {}".format(logits.size(), target.size()))
+            # logging.debug("size of logits: {}, size of target: {}".format(logits.size(), target.size()))
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
@@ -184,6 +196,7 @@ def zero_shot_eval(model, data, epoch, args):
         return results
     if (epoch % args.zeroshot_frequency) != 0 and epoch != args.epochs:
         return results
+
     if 'inat2021' in data:
         # if args.zs_upper:
         #     inat_classnames = to_upper(inat_classnames)
@@ -268,8 +281,8 @@ def zero_shot_eval(model, data, epoch, args):
 
     classifier = None
     
-    if 'imagenet-val' in data:
-        if classifier is None:
+    if 'imagenet-val' in data:            
+        if classifier is None and not args.linear_probe:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
@@ -277,7 +290,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenet-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot val. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-v2' in data:
-        if classifier is None:
+        if classifier is None and not args.linear_probe:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
@@ -285,7 +298,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenetv2-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot v2. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-s' in data:
-        if classifier is None:
+        if classifier is None and not args.linear_probe:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
@@ -293,14 +306,20 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenets-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot sketch. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-r' in data:
-        classifier = build_imagenet(args, model, "r")
-        top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args)
+        if args.linear_probe:
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_ir_idx())
+        else:
+            classifier = build_imagenet(args, model, "r")
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args)
         results['imagenetr-zeroshot-val-top1'] = top1
         results['imagenetr-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-r. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-a' in data:
-        classifier = build_imagenet(args, model, "a")
-        top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args)
+        if args.linear_probe:
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_ia_idx())
+        else:
+            classifier = build_imagenet(args, model, "a")
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args)
         results['imageneta-zeroshot-val-top1'] = top1
         results['imageneta-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-a. Top1 was {}, top5 was {}'.format(top1, top5))

@@ -404,6 +404,17 @@ def parse_args():
         help="max per-GPU batch size for gradient caching",
     )
     parser.add_argument(
+        "--linear-probe",
+        default=False,
+        help="Linear probing of timm models",
+    )
+    parser.add_argument(
+        "--image-size",
+        type=int,
+        default=224,
+        help="Resolution of model to probe",
+    )
+    parser.add_argument(
         "--filip",
         default=False,
         help="whether to use fine-grained contrastive learning (FILIP)",

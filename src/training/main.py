@@ -23,7 +23,13 @@ try:
 except ImportError:
     hvd = None
 
+try:
+    import timm
+except ImportError:
+    print("Timm was not found")
+
 from open_clip import create_model_and_transforms, trace_model
+from open_clip.transform import image_transform
 from training.data import get_data
 from training.distributed import is_master, init_distributed_device, world_info_from_env
 from training.logger import setup_logging
@@ -113,20 +119,26 @@ def main():
         logging.info(f'Running with a single process. Device {args.device}.')
 
     random_seed(args.seed, 0)
-    model, preprocess_train, preprocess_val = create_model_and_transforms(
-        args.model,
-        args.pretrained,
-        precision=args.precision,
-        device=device,
-        jit=args.torchscript,
-        force_quick_gelu=args.force_quick_gelu,
-        pretrained_image=args.pretrained_image,
-        filip=args.filip,
-        dcl=args.dcl,
-        elp=args.elp,
-        vssl=args.vssl,
-        mlm=args.mlm
-    )
+    if args.linear_probe:
+        model = timm.create_model(args.model, pretrained=True).to(device=device)
+        print(dir(model))
+        preprocess_train = image_transform(args.image_size, is_train=True)
+        preprocess_val = image_transform(args.image_size, is_train=False)
+    else:
+        model, preprocess_train, preprocess_val = create_model_and_transforms(
+            args.model,
+            args.pretrained,
+            precision=args.precision,
+            device=device,
+            jit=args.torchscript,
+            force_quick_gelu=args.force_quick_gelu,
+            pretrained_image=args.pretrained_image,
+            filip=args.filip,
+            dcl=args.dcl,
+            elp=args.elp,
+            vssl=args.vssl,
+            mlm=args.mlm
+        )
     random_seed(args.seed, args.rank)
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):

@@ -209,6 +209,10 @@ python src/training/main.py --batch-size=32 --workers=16 --resume "/scratch/bf99
 
 python src/training/main.py --batch-size=32 --workers=16 --resume "/scratch/bf996/open_clip/logs/coca-ep4-7/checkpoints/epoch_7.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --zeroshot-frequency=1 --model="coca"
 
+#### LINEAR PROBE
+
+python src/training/main.py --batch-size=32 --workers=16 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="tf_efficientnet_b0" --zeroshot-frequency=1 --linear-probe=True --image-size=224
+
 #### SINGLE NODE TRAINING
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --simplecaptions=True --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50

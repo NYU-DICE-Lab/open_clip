@@ -214,13 +214,16 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             data_time_m.reset()
     # end for
 
-
 def evaluate(model, data, epoch, args, tb_writer=None):
     metrics = {}
     if not is_master(args):
         return metrics
     device = torch.device(args.device)
     model.eval()
+
+    if args.linear_probe:
+        linear_metrics = zero_shot_eval(model, data, epoch, args)
+        return linear_metrics
 
     zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
     metrics.update(zero_shot_metrics)
