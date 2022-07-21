@@ -244,6 +244,14 @@ resnext101_64x4d
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --simplecaptions=True --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
 
+#### Shift Cipher Experiments
+
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_strict.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
+
+python -u /scratch/bf996/open_clip/src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..00010}.tar" --train-num-samples 100000 --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=8 --debug --model=RN50
+
+python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
+
 #### WDS TRAINING WITH FILTERING
 
 python -u /scratch/bf996/open_clip/src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..10000}.tar" --train-num-samples 15000000 --imagenet-val "/imagenet/val/" --ds-filter="imagenet_classnames" --gc=True  --gpumaxbatch=128 --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=1024 --epochs=16 --workers=8 --model=ViT-B-32

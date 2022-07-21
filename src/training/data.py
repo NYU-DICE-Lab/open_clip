@@ -105,7 +105,7 @@ def select_count(data, predicate, count):
             yield sample
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         if dscipher:
@@ -115,16 +115,16 @@ class CsvDataset(Dataset):
             df.loc[:, caption_key] = df.title.progress_apply(clean_captions)
             logging.debug("Done.")
             logging.debug(df.head())
-        if dscipher or simplecaptions:
+        if dscipher or simplecaptions or shift:
             logging.debug('Filtering and enciphering captions. Original dataset size is {}'.format(len(df)))
-            df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict)
+            df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict, shift=shift)
             logging.debug(df['title'].head())
             df = df[df['title'].str.len() > 0]
             logging.debug("Done. Length is now {}".format(len(df)))
             logging.debug(df.head())            
         elif csvfilter != "":
             logging.debug('Filtering captions. Original dataset size is {}'.format(len(df)))
-            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=False, simplecaptions=False, strict=strict)
+            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=False, simplecaptions=False, strict=strict, shift=shift)
             logging.debug(df['is_synset'].head())
             df = df[df['is_synset']].drop(columns=['is_synset'])
             logging.debug("Done. Length is now {}".format(len(df)))
@@ -187,22 +187,19 @@ def preprocess_txt(text):
         print(e)
         return ""
 
-def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict):
+def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift):
     try:
-        text = clean_captions(str(text))
-        if ds != "":
-            if dscipher and simplecaptions:
-                text = synset_ds(text, 3, ds, True, True, strict)
-            elif dscipher:
-                text = synset_ds(text, 3, ds, True, False, strict)
-            elif simplecaptions:
-                text = synset_ds(text, 3, ds, False, True, strict)
-            elif synset_ds(text, 3, ds, False, False, strict):
+        if any([dscipher, simplecaptions, strict, shift]):
+            text = clean_captions(str(text))
+            text = synset_ds(text, 3, ds, dscipher, simplecaptions, strict, shift)
+        elif ds != "":
+            text = clean_captions(str(text))
+            if synset_ds(text, 3, ds, False, False, strict, shift):
                 text = text
-                if scrambled:
-                    text = scramble_txt(text)
             else:
                 text = ""
+        if scrambled:
+            text = scramble_txt(text)
         #logging.debug("leaving filter_preprocess")
         #logging.debug(text)
         return text
@@ -218,6 +215,22 @@ def scramble_txt(text):
     return text 
 
 """
+Shift cipher for alphabetic strings
+"""
+
+def shift_cipher(s, shift):
+  retstr = ""
+  for c in s:
+    if c.isalpha():
+      if c.islower():
+          ordshift = 97
+      else:
+          ordshift = 65
+      c = c.translate({ord(ch):(ord(ch) - ordshift + shift) % 26 + ordshift for ch in c})
+    retstr = retstr + c
+  return retstr
+
+"""
 Synset builder
 
 Dataset argument expects a list of class names as strings -- any dataset can be used
@@ -226,10 +239,10 @@ nva uses parts of speech for all of wordnet, instead of matching on some list fr
 WARNING: can return string or bool, depending on arguments provided
 """
 
-def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False):
+def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None):
     try:
         flag = False
-        s = [lemmatizer.lemmatize(t) for t in s.split(" ")]
+        s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
         # logging.debug('s is now {}'.format(s))
         str_s = " ".join(w for w in s)
         # logging.debug('str_s is now {}'.format(str_s))
@@ -262,7 +275,7 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                     if cipher:
                         # logging.debug("str_s before cipher replacement: {}".format(str_s))
                         str_s = str_s.replace(gram, k)
-                        # logging.debug("str_s after cipher replacement: {}".format(str_s))
+                        # logging.debug("str_s after cipher replacement: {}".format(str_s))              
                 elif simplecaptions and not ds:
                     d = wordnet.synsets(gram)
                     if d in stopwords.words('english'):
@@ -272,11 +285,14 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                     elif d and str_s.find(gram) == -1:
                         str_s += " {}".format(gram)
                     flag=True
-    
         if cipher or simplecaptions:
             if not flag:
                 str_s = ""
-            logging.debug("Returning {}".format(str_s))
+            logging.debug("cipher/simplecaptions returning {}".format(str_s))
+            return str_s
+        elif shift:
+            str_s = shift_cipher(str_s, shift)
+            logging.debug("String transformed from {} using shift cipher {} to: {}".format(s, shift, str_s))
             return str_s
         return flag
     except Exception as e:
@@ -598,9 +614,9 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.decode("pilrgb", handler=log_and_continue),
         wds.rename(image="jpg;png", text="txt"),
     ])
-    if args.ds_filter != "" or args.csv_scrambled:
+    if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
         pipeline.extend([
-            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict)),
+            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher)),
             wds.select(filter_no_caption_text),
             # select_count(filter_no_caption_text, selectedCount[0]),
         ])
@@ -686,6 +702,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
         dscipher=args.ds_cipher,
         simplecaptions=args.simplecaptions,
         strict=args.strict,
+        shift=args.shift_cipher,
         sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
@@ -730,7 +747,7 @@ def get_dataset_fn(data_path, dataset_type):
 def get_data(args, preprocess_fns, epoch=0):
     preprocess_train, preprocess_val = preprocess_fns
     data = {}
-
+    assert bool(args.ds_cipher) ^ bool(args.shift_cipher), "Cannot use ds_cipher and shift_cipher"
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch)

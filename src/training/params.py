@@ -79,6 +79,12 @@ def parse_args():
         help="Filter to only include samples in the batch whose captions contain an ImageNet1k class, and encode those classes using a substitution cipher: caption cleaning required."
     )
     parser.add_argument(
+        "--shift-cipher",
+        type=int,
+        default=None,
+        help="Apply a shift cipher to the captions, with a value provided as an argument."
+    )
+    parser.add_argument(
         "--simplecaptions",
         type=bool,
         default=False,

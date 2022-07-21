@@ -11,6 +11,8 @@ import numpy as np
 
 from open_clip import tokenize
 
+from .data import shift_cipher
+
 from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx
 
 try:
@@ -155,33 +157,42 @@ def to_lower(l):
     return [c.lower() for c in l]
 
 def build_imagenet(args, model, in_type=""):
+    template = get_openai_imagenet_template()
     if in_type == "r":
         if args.zs_upper:
-            classifier = zero_shot_classifier(model, to_upper(get_imagenet_r_classnames()), get_openai_imagenet_template(), args)
+            classnames = to_upper(get_imagenet_r_classnames())
         elif args.zs_lower:
-            classifier = zero_shot_classifier(model, to_lower(get_imagenet_r_classnames()), get_openai_imagenet_template(), args)
-        if args.ds_cipher:
-            classifier = zero_shot_classifier(model, get_imagenet_r_cipher(), get_openai_imagenet_template(), args)
+            classnames = to_lower(get_imagenet_r_classnames())
+        elif args.ds_cipher:
+            classnames = get_imagenet_r_cipher()
+        elif args.shift_cipher:
+            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
-            classifier = zero_shot_classifier(model, get_imagenet_r_classnames(), get_openai_imagenet_template(), args)   
-    elif in_type == "a":
+            classnames = get_imagenet_r_classnames()
+    if in_type == "a":
         if args.zs_upper:
-            classifier = zero_shot_classifier(model, to_upper(get_imagenet_a_classnames()), get_openai_imagenet_template(), args)
+            classnames = to_upper(get_imagenet_a_classnames())
         elif args.zs_lower:
-            classifier = zero_shot_classifier(model, to_lower(get_imagenet_a_classnames()), get_openai_imagenet_template(), args)
-        if args.ds_cipher:
-            classifier = zero_shot_classifier(model, get_imagenet_a_cipher(), get_openai_imagenet_template(), args)
+            classnames = to_lower(get_imagenet_a_classnames())
+        elif args.ds_cipher:
+            classnames = get_imagenet_a_cipher()
+        elif args.shift_cipher:
+            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
-            classifier = zero_shot_classifier(model, get_imagenet_a_classnames(), get_openai_imagenet_template(), args)  
+            classnames = get_imagenet_a_classnames() 
     else:
         if args.zs_upper:
-            classifier = zero_shot_classifier(model, to_upper(get_imagenet_classnames()), get_openai_imagenet_template(), args)
+            classnames = to_upper(get_imagenet_classnames())
         elif args.zs_lower:
-            classifier = zero_shot_classifier(model, to_lower(get_imagenet_classnames()), get_openai_imagenet_template(), args)
+            classnames = to_lower(get_imagenet_classnames())
         elif args.ds_cipher:
-            classifier = zero_shot_classifier(model, get_imagenet_cipher(), get_openai_imagenet_template(), args)
+            classnames = get_imagenet_cipher()
+        elif args.shift_cipher:
+            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
-            classifier = zero_shot_classifier(model, get_imagenet_classnames(), get_openai_imagenet_template(), args)
+            classnames = get_imagenet_classnames()
+    logging.debug("imagenet classnames first 10: {}".format(classnames[:10]))
+    classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 
 def zero_shot_eval(model, data, epoch, args):
