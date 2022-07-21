@@ -27,6 +27,7 @@ def l2norm(t):
     return F.normalize(t, dim = -1, p = 2)
 
 def zero_shot_classifier(model, classnames, templates, args):
+    logging.debug("In zero-shot-classifer, classnames are {}".format(classnames))
     with torch.no_grad():
         zeroshot_weights = []
         for classname in tqdm(classnames):
@@ -38,8 +39,7 @@ def zero_shot_classifier(model, classnames, templates, args):
                     random.shuffle(l)
                     res.append(" ".join(l).strip())
             texts = tokenize(texts).to(args.device)  # tokenize
-            # print("size of texts: ")
-            # print(texts.size())
+            logging.debug("In zero-shot-classifer, tokens are {}".format(classnames))
             if args.distributed and not args.horovod:
                 if args.model in ["coca"]:
                     images = torch.rand(len(texts), 3, 224, 224).to(args.device)
@@ -280,13 +280,14 @@ def zero_shot_eval(model, data, epoch, args):
     logging.info('Starting zero-shot imagenet.')
 
     classifier = None
-    
+    imagenets = []
     if 'imagenet-val' in data:            
         if classifier is None and not args.linear_probe:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
         results['imagenet-zeroshot-val-top1'] = top1
+        imagenets.append(top1)
         results['imagenet-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot val. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-v2' in data:
@@ -295,6 +296,7 @@ def zero_shot_eval(model, data, epoch, args):
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
         results['imagenetv2-zeroshot-val-top1'] = top1
+        imagenets.append(top1)
         results['imagenetv2-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot v2. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-s' in data:
@@ -303,6 +305,7 @@ def zero_shot_eval(model, data, epoch, args):
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
         results['imagenets-zeroshot-val-top1'] = top1
+        imagenets.append(top1)
         results['imagenets-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot sketch. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-r' in data:
@@ -312,6 +315,7 @@ def zero_shot_eval(model, data, epoch, args):
             classifier = build_imagenet(args, model, "r")
             top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args)
         results['imagenetr-zeroshot-val-top1'] = top1
+        imagenets.append(top1)
         results['imagenetr-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-r. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-a' in data:
@@ -321,9 +325,18 @@ def zero_shot_eval(model, data, epoch, args):
             classifier = build_imagenet(args, model, "a")
             top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args)
         results['imageneta-zeroshot-val-top1'] = top1
+        imagenets.append(top1)
         results['imageneta-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-a. Top1 was {}, top5 was {}'.format(top1, top5))
-
+    if results.get('imagenet-zeroshot-val-top1'):
+        logging.info("computing effective robustness on imagenet")
+        logging.info("len imagenets {}".format(len(imagenets)))
+        try:
+            imagenets = np.array(imagenets)
+            results['imagenet-effective-robustness'] = np.divide(np.average(imagenets), results['imagenet-zeroshot-val-top1'])
+        except Exception as e:
+            logging.info("error calculating effective robustness: ")
+            logging.info(e)
     logging.info('Finished zero-shot evals')
 
     return results

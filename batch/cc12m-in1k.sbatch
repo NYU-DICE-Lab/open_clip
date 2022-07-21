@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion_subset_%j.log
+#SBATCH --output=cc12m_subset_%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -8,7 +8,7 @@
 #SBATCH --mem=128GB
 #SBATCH --gres=gpu:4
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=laion_subset_training
+#SBATCH --job-name=cc12m_subset_training
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 
@@ -29,4 +29,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 15000000 --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-filter-ep1-16/checkpoints/epoch_16.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=RN50 --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=RN50 --local-loss --gather-with-grad'

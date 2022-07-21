@@ -94,6 +94,16 @@ cipher_dict = {
     '?': '?',
 }
 
+def select_count(data, predicate, count):
+    """Select samples based on a predicate.
+    :param data: source iterator
+    :param predicate: predicate (function)
+    """
+    for sample in data:
+        if predicate(sample):
+            count = count + 1
+            yield sample
+
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
@@ -536,7 +546,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
     resampled = getattr(args, 'dataset_resampled', False) and is_train
-
+    selectedCount = [0]
     num_samples, num_shards = get_dataset_size(input_shards)
     if not num_samples:
         if is_train:
@@ -589,11 +599,10 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.rename(image="jpg;png", text="txt"),
     ])
     if args.ds_filter != "" or args.csv_scrambled:
-        logging.debug("get_wds_dataset, filtering")
         pipeline.extend([
             wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict)),
-            #wds.map_dict(text=partial(filter_preprocess_txt, args.ds_filter, args.csv_scrambled)),
             wds.select(filter_no_caption_text),
+            # select_count(filter_no_caption_text, selectedCount[0]),
         ])
     pipeline.extend([
         wds.map_dict(image=preprocess_img, text=preprocess_txt),
@@ -601,7 +610,6 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.batched(args.batch_size, partial=args.ds_filter != "" or not is_train)
     ])
     dataset = wds.DataPipeline(*pipeline)
-    logging.debug("get_wds_dataset, pipeline assembled")
     if is_train:
         if not resampled:
             assert num_shards >= args.workers * args.world_size, 'number of shards must be >= total workers'
@@ -617,7 +625,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
     else:
         # last batches are partial, eval is done on single (master) node
         num_batches = math.ceil(num_samples / args.batch_size)
-
+        
     dataloader = wds.WebLoader(
         dataset,
         batch_size=None,

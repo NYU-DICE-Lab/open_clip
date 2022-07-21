@@ -253,7 +253,8 @@ def main():
     if args.wandb and is_master(args):
         assert wandb is not None, 'Please install wandb.'
         logging.debug('Starting wandb.')
-        args.train_sz = data["train"].dataloader.num_samples
+        if 'train' in data:
+            args.train_sz = data["train"].dataloader.num_samples
         if args.val_data is not None:
             args.val_sz = data["val"].dataloader.num_samples
         # you will have to configure this for your project!
@@ -263,6 +264,7 @@ def main():
             tags=[],
             config=vars(args),
         )
+        wandb.run.name = str(args.model) + " " + str(args.train_data)
         if args.debug:
             wandb.watch(model, log='all')
         wandb.save(params_file)

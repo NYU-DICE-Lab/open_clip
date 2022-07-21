@@ -101,7 +101,6 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             for b in batch[1].tolist():
                 if b not in batchset:
                     batchset.append(b)
-                logging.debug("The model has seen {} unique samples".format(len(batchset)))
         # logging.info(random.sample(batchset, 10))
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
@@ -161,7 +160,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 if not args.gc:
                     total_loss.backward()
                 optimizer.step()
-
+        if args.ds_filter and args.debug:
+            logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         if args.model not in ["coca", "xclip"]:
             with torch.no_grad():
@@ -223,10 +223,11 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
     if args.linear_probe:
         linear_metrics = zero_shot_eval(model, data, epoch, args)
-        return linear_metrics
-
-    zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
-    metrics.update(zero_shot_metrics)
+        metrics.update(linear_metrics)
+        # return metrics
+    else:
+        zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+        metrics.update(zero_shot_metrics)
 
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     if 'val' in data and (args.val_frequency and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)):
