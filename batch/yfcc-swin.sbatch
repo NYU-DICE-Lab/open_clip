@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#SBATCH --output=yfcc_declip_%j.log
+#SBATCH --output=yfcc_subset_%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -8,10 +8,10 @@
 #SBATCH --mem=192GB
 #SBATCH --gres=gpu:4
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=yfcc_declip
+#SBATCH --job-name=yfcc_subset_training
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
-#SBATCH --dependency=afterany:22234381
+#SBATCH --dependency=afterany:22346238
 
 module purge;
 
@@ -30,4 +30,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --resume "/scratch/bf996/open_clip/logs/yfcc-vit-b-32-declip-ep8-20/checkpoints/epoch_20.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=vit_base_patch32_224 --mlm=True --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=timm-swin_base_patch4_window7_224 --local-loss --gather-with-grad'

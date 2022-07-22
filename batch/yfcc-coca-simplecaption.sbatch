@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=128GB
+#SBATCH --mem=192GB
 #SBATCH --gres=gpu:4
 #SBATCH --job-name=yfcc_coca
 #SBATCH --mail-type=BEGIN,END
@@ -28,4 +28,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash "/scratch/bf996/open_clip/src/script/run-singularity.bash" \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_simple_nounadj.csv" --csv-separator "," --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --save-frequency 1 --report-to wandb --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=coca'
+    'export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_simple_nounadj.csv" --csv-separator "," --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --save-frequency 1 --report-to wandb --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=coca'

@@ -747,7 +747,6 @@ def get_dataset_fn(data_path, dataset_type):
 def get_data(args, preprocess_fns, epoch=0):
     preprocess_train, preprocess_val = preprocess_fns
     data = {}
-    assert bool(args.ds_cipher) ^ bool(args.shift_cipher), "Cannot use ds_cipher and shift_cipher"
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch)

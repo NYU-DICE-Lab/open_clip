@@ -159,38 +159,28 @@ def to_lower(l):
 def build_imagenet(args, model, in_type=""):
     template = get_openai_imagenet_template()
     if in_type == "r":
-        if args.zs_upper:
-            classnames = to_upper(get_imagenet_r_classnames())
-        elif args.zs_lower:
-            classnames = to_lower(get_imagenet_r_classnames())
-        elif args.ds_cipher:
+        if args.ds_cipher:
             classnames = get_imagenet_r_cipher()
-        elif args.shift_cipher:
-            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
             classnames = get_imagenet_r_classnames()
-    if in_type == "a":
-        if args.zs_upper:
-            classnames = to_upper(get_imagenet_a_classnames())
-        elif args.zs_lower:
-            classnames = to_lower(get_imagenet_a_classnames())
-        elif args.ds_cipher:
+    elif in_type == "a":
+        if args.ds_cipher:
             classnames = get_imagenet_a_cipher()
-        elif args.shift_cipher:
-            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
-            classnames = get_imagenet_a_classnames() 
+            classnames = get_imagenet_a_classnames()    
     else:
-        if args.zs_upper:
-            classnames = to_upper(get_imagenet_classnames())
-        elif args.zs_lower:
-            classnames = to_lower(get_imagenet_classnames())
-        elif args.ds_cipher:
+        if args.ds_cipher:
             classnames = get_imagenet_cipher()
-        elif args.shift_cipher:
-            classnames = [shift_cipher(s, args.shift_cipher) for s in get_imagenet_classnames()]
         else:
             classnames = get_imagenet_classnames()
+
+    if args.zs_upper:
+        classnames = to_upper(classnames)
+    elif args.zs_lower:
+        classnames = to_lower(classnames)
+    elif args.shift_cipher:
+        classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
+
     logging.debug("imagenet classnames first 10: {}".format(classnames[:10]))
     classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
