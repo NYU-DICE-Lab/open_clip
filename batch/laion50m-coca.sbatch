@@ -1,17 +1,14 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion_coca_%j.log
+#SBATCH --output=laion50m_coca_%j.log
 #SBATCH --nodes=4
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
-#SBATCH --mem=128GB
+#SBATCH --mem=192GB
 #SBATCH --gres=gpu:mi50:8
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=laion_coca
-#SBATCH --mail-type=BEGIN,END
-#SBATCH --mail-user=bf996@nyu.edu
-#SBATCH --dependency=afterany:22310631
+#SBATCH --job-name=laion50m_coca
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

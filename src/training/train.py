@@ -95,7 +95,6 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             )
 
     batchset = list()
-
     for i, batch in enumerate(dataloader):
         if args.ds_filter and args.debug:
             for b in batch[1].tolist():
@@ -138,10 +137,12 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                         images = images,
                         return_loss = True  # set this to True to get the full caption + contrastive loss
                     )
+                if not torch.isfinite(total_loss):
+                    logging.info("Loss is NaN -- skipping batch {}".format(i))
+                    continue      
             else:                    
                 image_features, text_features, logit_scale = model(images, texts)
-                total_loss = loss(image_features, text_features, logit_scale)
-            
+                total_loss = loss(image_features, text_features, logit_scale)            
             if scaler is not None:
                 if args.gc:
                     scaler.step(optimizer)

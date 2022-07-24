@@ -212,11 +212,13 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/declip-ViT-B-32-ep1-8/checkpoints/epoch_7.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=vit_base_patch32_224 --mlm=True;
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-scramble-ep21-32/checkpoints/epoch_32.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=ViT-B-32
+#### Simple Captions Validation
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-ep12-28/checkpoints/epoch_16.pt" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-simplenounadj-ep27-32-bugged/checkpoints/epoch_28.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50
 
+#### Shift Cipher Validation
 
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/2022_07_21-13_05_14-model_RN50-lr_0.0005-b_256-j_8-p_amp/checkpoints/epoch_4.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --zeroshot-frequency=1 --model=RN50
 
 #### LINEAR PROBE
 
@@ -224,17 +226,27 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imag
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="tf_efficientnet_b0" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="mobilenetv3_small_050" --zeroshot-frequency=1 --linear-probe=True --image-size=224
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="vit_huge_patch14_224_in21k" --zeroshot-frequency=1 --linear-probe=True --image-size=224
+
+vit_huge_patch14_224_in21k
+
+ig_resnext101_32x48d
+
+tf_efficientnet_l2_ns
+
+regnety_032
+
+regnety_002
 
 vgg19_bn
-
-tf_efficientnet_l2_ns_475
 
 tf_efficientnetv2_xl_in21ft1k
 
 swin_base_patch4_window7_224
 
 regnetx_320
+
+vit_base_patch32_224
 
 vit_tiny_patch16_224
 

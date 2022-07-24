@@ -111,12 +111,13 @@ class CsvDataset(Dataset):
         if dscipher:
             csvcleaned=True
         if csvcleaned:
-            logging.debug("cleaning captions")
+            logging.debug('Cleaning captions. Original dataset size is {}'.format(len(df)))
             df.loc[:, caption_key] = df.title.progress_apply(clean_captions)
-            logging.debug("Done.")
+            df = df[df['title'].str.len() > 0]
+            logging.debug("Done. Length is now {}".format(len(df)))
             logging.debug(df.head())
         if dscipher or simplecaptions or shift:
-            logging.debug('Filtering and enciphering captions. Original dataset size is {}'.format(len(df)))
+            logging.debug('Transforming or encoding captions. Original dataset size is {}'.format(len(df)))
             df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict, shift=shift)
             logging.debug(df['title'].head())
             df = df[df['title'].str.len() > 0]
@@ -674,9 +675,11 @@ def my_collate(batch):
     # logging.debug("batch contents: {}".format(batch))
     len_batch = len(batch) # original batch length
     # logging.debug("Before filter, batch length is {}".format(len_batch))
-    batch = list(filter (lambda x:x is not None, batch)) # filter out all the Nones
+    batch = list(filter (lambda x:bool(x)==True, batch[0])) # filter out all the Nones
+    batch = list(filter (lambda x:bool(x)==True, batch[1])) # filter out all the Nones
     # logging.debug("After filter, batch length is {}".format(len(batch)))
     if len_batch > len(batch): # if there are samples missing just use existing members, doesn't work if you reject every sample in a batch
+        logging.debug("Found empty samples in batch")
         diff = len_batch - len(batch)
         for i in range(diff):
             batch = batch + batch[:diff]
@@ -714,8 +717,8 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
         num_workers=args.workers,
         pin_memory=True,
         sampler=sampler,
-        drop_last=is_train,
-        collate_fn=my_collate
+        drop_last=is_train
+        # collate_fn=my_collate
     )
     dataloader.num_samples = num_samples
     dataloader.num_batches = len(dataloader)

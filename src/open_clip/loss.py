@@ -130,7 +130,7 @@ class ClipLoss(nn.Module):
             F.cross_entropy(logits_per_text, labels)
             ) / 2
         if torch.any(torch.isnan(total_loss)):
-            logging.warning("Leaving clip_loss, NaN loss detected: {}".format(total_loss))
+            logging.warning("Leaving ClipLoss, NaN loss detected: {}".format(total_loss))
         return total_loss
 
 # class TokenClassLoss(nn.Module):

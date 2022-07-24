@@ -5,7 +5,7 @@
         "timm_model_pretrained": true,
         "timm_pool": "abs_attn",
         "timm_proj": "",
-        "image_size": 288
+        "image_size": 475
     },
     "text_cfg": {
         "context_length": 77,
