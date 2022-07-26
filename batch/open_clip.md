@@ -115,7 +115,7 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 --train-data="~/Train_GCC-training_output.csv"       --csv-img-key filepath     --csv-caption-key title
 
---train-data '/media/benfeuer/laion/laion400m/{00000..10000}.tar' --train-num-samples 50000000 --dataset-type webdataset
+--train-data '/vast/work/public/ml-datasets/laion400m/{7500..22500}.tar' --train-num-samples 50000000 --dataset-type webdataset
 
 #### Dataset Modification
 
@@ -192,7 +192,7 @@ python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagene
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --model=ViT-B-32 --pretrained=laion2b_e16
 
-python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-v2 "/scratch/bf996/datasets"  --imagenet-s "/imagenet-sketch" --model=RN50  --pretrained=yfcc15m
+python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50  --pretrained=yfcc15m --no-ensembling=True; python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50  --pretrained=yfcc15m --no-ensembling=True --zeroshot-scramble=True
 
 python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50 --pretrained=yfcc15m
 
@@ -222,7 +222,7 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 #### LINEAR PROBE
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="coat_tiny" --zeroshot-frequency=1 --linear-probe=True --image-size=224
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-r "/imagenet-r" --model="coat_tiny" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="tf_efficientnet_b0" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
@@ -259,6 +259,12 @@ resnext101_64x4d
 #### SINGLE NODE TRAINING
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --simplecaptions=True --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
+
+#### Single Node Training with Integer Multiclass labels
+
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_mc_subset_3965496.csv" --csv-separator "," --integer-labels --multiclass --csv-caption-key="in1k_subset_mc" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
+
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
 
 #### Shift Cipher Experiments
 

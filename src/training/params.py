@@ -85,6 +85,12 @@ def parse_args():
         help="Apply a shift cipher to the captions, with a value provided as an argument."
     )
     parser.add_argument(
+        "--no-ensembling",
+        type=bool,
+        default=False,
+        help="No prompt ensembling: evaluate on the first prompt in the template"
+    )
+    parser.add_argument(
         "--simplecaptions",
         type=bool,
         default=False,
@@ -227,6 +233,7 @@ def parse_args():
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
     )
+    parser.add_argument("--clamp", type=float, default=0, help="Gradient clamping.")
     parser.add_argument(
         "--use-bn-sync",
         default=False,
@@ -291,6 +298,30 @@ def parse_args():
         default=False,
         action='store_true',
         help="Lock full image tower by disabling gradients.",
+    )
+    parser.add_argument(
+        "--lock-text",
+        default=False,
+        action='store_true',
+        help="Lock full text tower by disabling gradients.",
+    )
+    parser.add_argument(
+        "--integer-labels",
+        default=False,
+        action='store_true',
+        help="Train on integer labels instead of text captions.",
+    )
+    parser.add_argument(
+        "--multiclass",
+        default=False,
+        action='store_true',
+        help="Multiclass integer labels.",
+    )
+    parser.add_argument(
+        "--fine-tune",
+        default=False,
+        action='store_true',
+        help="Resume checkpoint for fine tuning (ignore optimizer and scaler, if they exist)",
     )
     parser.add_argument(
         "--lock-image-unlocked-groups",

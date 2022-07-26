@@ -46,6 +46,22 @@ def unwrap_model(model):
     else:
         return model
 
+def train_integer_labels(model, images, labels, device):
+    print(labels)
+    criterion = torch.nn.CrossEntropyLoss().to(device=device, non_blocking=True)
+    logits = model(images)
+    loss = 0
+    if len(labels[0]) > 1:
+        for idx, label in enumerate(labels):
+            pred = logits[idx]
+            for tag in label:
+                if tag == -1:
+                    continue
+                else:
+                    loss = loss + criterion(pred, tag)
+    else:
+        loss = criterion(logits, labels)
+    return loss
 
 def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None):
     device = torch.device(args.device)
@@ -96,34 +112,36 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
     batchset = list()
     for i, batch in enumerate(dataloader):
+        #HOUSEKEEPING
         if args.ds_filter and args.debug:
             for b in batch[1].tolist():
                 if b not in batchset:
                     batchset.append(b)
-        # logging.info(random.sample(batchset, 10))
+
+        #PREP BATCH
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
         images, texts = batch
         texts = texts.to(device=device, non_blocking=True)
         images = images.to(device=device, non_blocking=True)
-        ## filtering (too slow)
-        # skiptoken = tokenize(["NONE"])[0].to(device=device, non_blocking=True)
-        # indices = [j for j, t in enumerate(texts) if not torch.equal(t, skiptoken)]
-        # texts = texts[indices]
-        # images = images[indices]
         logging.debug("batch length: {}".format(len(images)))
         if len(images) < 2:
             logging.debug("skipping short batch")
             continue
         data_time_m.update(time.time() - end)
         optimizer.zero_grad()
+
+        # LOSS
         with autocast():
-            if args.gc:
-                if args.model in ["coca", "xclip"]:
+            if args.integer_labels:
+                total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            elif args.gc:
+                if args.alt:
                     raise("gradient caching not supported yet for this model, sorry!")
                 total_loss, logit_scale_scalar = gc([images, texts], vl_model=True, no_sync_except_last=args.distributed, lock_img=(args.lock_image_freeze_bn_stats or args.lock_image), scaler=scaler)
 
-            elif args.model in ["coca", "xclip"]:
+            elif args.alt:
                 if args.model == "xclip":
                     total_loss = model(
                         texts,
@@ -137,18 +155,26 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                         images = images,
                         return_loss = True  # set this to True to get the full caption + contrastive loss
                     )
-                if not torch.isfinite(total_loss):
-                    logging.info("Loss is NaN -- skipping batch {}".format(i))
-                    continue      
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)  
             else:                    
                 image_features, text_features, logit_scale = model(images, texts)
-                total_loss = loss(image_features, text_features, logit_scale)            
+                total_loss = loss(image_features, text_features, logit_scale)
+
+            #BACKWARD           
             if scaler is not None:
                 if args.gc:
                     scaler.step(optimizer)
                     scaler.update()
                 else:
                     scaler.scale(total_loss).backward()
+                    if not torch.isfinite(total_loss):
+                        logging.info("Loss is NaN -- skipping batch {}".format(i))
+                        optimizer.zero_grad()
+                        try:
+                            torch.cuda.empty_cache()
+                        except:
+                            print("No cuda cache to free")
+                        continue
                     if args.horovod:
                         optimizer.synchronize()
                         scaler.unscale_(optimizer)
@@ -160,14 +186,23 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             else:
                 if not args.gc:
                     total_loss.backward()
+                    if not torch.isfinite(total_loss):
+                        logging.info("Loss is NaN -- skipping batch {}".format(i))
+                        optimizer.zero_grad()
+                        try:
+                            torch.cuda.empty_cache()
+                        except:
+                            print("No cuda cache to free")
+                        continue
                 optimizer.step()
+
+        #HOUSEKEEPING
         if args.ds_filter and args.debug:
             logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         if args.model not in ["coca", "xclip"]:
             with torch.no_grad():
                 unwrap_model(model).logit_scale.clamp_(0, math.log(100))
-
         batch_time_m.update(time.time() - end)
         end = time.time()
         batch_count = i + 1
@@ -181,7 +216,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             loss_m.update(total_loss.item(), batch_size)
             if np.isnan(loss_m.val):
                 logging.debug("NaN loss in logging function on iteration {}".format(i))
-            if args.model in ["coca", "xclip"]:
+            if args.alt or args.integer_labels:
                 logit_scale = torch.tensor([1.0])
             if not args.gc:
                 logit_scale_scalar = logit_scale.item()
@@ -222,13 +257,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     device = torch.device(args.device)
     model.eval()
 
-    if args.linear_probe:
-        linear_metrics = zero_shot_eval(model, data, epoch, args)
-        metrics.update(linear_metrics)
-        # return metrics
-    else:
-        zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
-        metrics.update(zero_shot_metrics)
+    zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+    metrics.update(zero_shot_metrics)
 
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     if 'val' in data and (args.val_frequency and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)):

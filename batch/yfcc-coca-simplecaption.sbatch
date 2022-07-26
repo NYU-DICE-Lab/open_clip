@@ -28,4 +28,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash "/scratch/bf996/open_clip/src/script/run-singularity.bash" \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_simple_nounadj.csv" --csv-separator "," --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --save-frequency 1 --report-to wandb --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=coca'
+    'export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_simple_nounadj.csv" --csv-separator "," --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --precision=fp32 --save-frequency 1 --report-to wandb --warmup 2000 --batch-size=64 --epochs=32 --workers=8 --model=coca'

@@ -16,6 +16,7 @@ import pandas as pd
 from tqdm.auto import tqdm  # for notebooks
 tqdm.pandas()
 import torch
+import torchvision
 import torchvision.datasets as datasets
 import webdataset as wds
 from PIL import Image
@@ -47,8 +48,6 @@ from open_clip import tokenize
 
 from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template
 
-imagenet_classnames = get_imagenet_classnames()
-
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
     from .cars_zeroshot_data import cars_classnames, cars_template
@@ -57,7 +56,8 @@ try:
     from .air_zeroshot_data import air_classnames, air_template
 
 except Exception as e:
-    print(e)
+    logging.info("Import exception: ")
+    logging.info(e)
 
 cipher_dict = {
     'a': '@^',
@@ -104,8 +104,26 @@ def select_count(data, predicate, count):
             count = count + 1
             yield sample
 
+def clean_integer_label(label):
+    if type(label) != int and type(label) != str:
+        logging.warning("Expected single or multi integer label, got {} -- mapping to 0".format(label))
+        label = 0
+        return label
+    elif type(label) == str and label == "":
+        return label
+    elif type(label) == str:
+        label = label.split(", ")
+        label = [int(l) for l in label]
+        if len(label) > 25:
+            label = label[:24]
+        if len(label) < 25:
+            padding = [-1 for i in range(25 - len(label))]
+            label = label + padding
+    # logging.info(len(label))
+    return torch.tensor(label)
+
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         if dscipher:
@@ -134,6 +152,7 @@ class CsvDataset(Dataset):
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
         self.scrambled = csvscrambled
+        self.integer_labels = integer_labels
         logging.debug('Done loading data')
 
     def __len__(self):
@@ -142,18 +161,28 @@ class CsvDataset(Dataset):
     def __getitem__(self, idx):
         try:
             images = self.transforms(Image.open(str(self.images[idx])))
+            # assert(images.size() == (3, 224, 224))
+            torch.nan_to_num(images, nan=0.01, posinf=0.99, neginf=0.01)
             texts = str(self.captions[idx])
-            if self.scrambled:
-                texts = scramble_txt(texts)
-            texts = tokenize(texts)[0]
         except Exception as e:
-            logging.debug("Missing or unreadable image at {}, generating dummy image and caption.".format(str(self.images[idx])))
-            logging.debug("error message {}".format(e))
-            imarray = np.random.rand(224,224,3) * 255
-            images = self.transforms(
-                Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-                )
-            texts = tokenize(["NONE"])[0]
+            logging.warning("Exception in csv dataset: {}".format(e))
+            logging.warning("Missing or unreadable image at {}, attempting to skip.".format(str(self.images[idx])))
+            try:
+                images = self.transforms(Image.open(str(self.images[idx+1])))
+                texts = self.captions[idx+1]
+            except:
+                logging.warning("Skip failed. Generating dummy image and caption.".format(str(self.images[idx])))
+                imarray = np.random.rand(224,224,3) * 255
+                images = self.transforms(
+                    Image.fromarray(imarray.astype('uint8')).convert('RGBA')
+                    )
+                texts = "NONE"
+        if self.integer_labels:
+            texts = clean_integer_label(self.captions[idx])
+            return images, texts
+        if self.scrambled:
+            texts = scramble_txt(texts)
+        texts = tokenize(texts)[0]
         return images, texts
 
 class SharedEpoch:
@@ -185,28 +214,31 @@ def preprocess_txt(text):
         text = str(text)
         return tokenize([text])[0]
     except Exception as e:
-        print(e)
-        return ""
+        logging.info("Exception in preprocess_txt")
+        logging.info(e)
+        return tokenize(["NONE"])[0]
 
-def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift):
+def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels):
     try:
-        if any([dscipher, simplecaptions, strict, shift]):
+        if integer_labels and ds:
             text = clean_captions(str(text))
-            text = synset_ds(text, 3, ds, dscipher, simplecaptions, strict, shift)
+            text = synset_ds(text, 3, ds, False, False, strict, False, integer_labels)
+            text = clean_integer_label(text)
+        elif any([dscipher, simplecaptions, strict, shift]):
+            text = clean_captions(str(text))
+            text = synset_ds(text, 3, ds, dscipher, simplecaptions, strict, shift, integer_labels)
         elif ds != "":
             text = clean_captions(str(text))
-            if synset_ds(text, 3, ds, False, False, strict, shift):
+            if synset_ds(text, 3, ds, False, False, strict, shift, integer_labels):
                 text = text
             else:
                 text = ""
         if scrambled:
             text = scramble_txt(text)
-        #logging.debug("leaving filter_preprocess")
-        #logging.debug(text)
         return text
     except Exception as e:
-        print("in filter preprocess: ")
-        print(e)
+        logging.info("Exception in filter preprocess: ")
+        logging.info(e)
         return ""
 
 def scramble_txt(text):
@@ -240,7 +272,7 @@ nva uses parts of speech for all of wordnet, instead of matching on some list fr
 WARNING: can return string or bool, depending on arguments provided
 """
 
-def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None):
+def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None, integer_labels=False):
     try:
         flag = False
         s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
@@ -267,7 +299,14 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                         k = k + nextc
                     gram_t = k
                 if ds and gram_t in ds:
-                    # logging.debug("k is now {}".format(k))
+                    if integer_labels and not flag:
+                        str_s = "{}".format(ds.index(gram_t))
+                    elif integer_labels:
+                        idx_insert = ds.index(gram_t)
+                        if str_s.find(str(idx_insert)) == -1:
+                            str_s += ", {}".format(idx_insert)
+                        # logging.info("str_s in integer_labels is now {}".format(str_s))
+                        continue
                     if simplecaptions and not flag:
                         str_s = "An image of " + gram_t
                     elif simplecaptions and flag and str_s.find(gram) == -1:
@@ -286,27 +325,28 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                     elif d and str_s.find(gram) == -1:
                         str_s += " {}".format(gram)
                     flag=True
-        if cipher or simplecaptions:
+        if cipher or simplecaptions or integer_labels:
             if not flag:
                 str_s = ""
-            logging.debug("cipher/simplecaptions returning {}".format(str_s))
+            #else:
+            #logging.debug("cipher/simplecaptions/integerlabels returning {}".format(str_s))
             return str_s
         elif shift:
             str_s = shift_cipher(str_s, shift)
-            logging.debug("String transformed from {} using shift cipher {} to: {}".format(s, shift, str_s))
+            #logging.debug("String transformed from {} using shift cipher {} to: {}".format(s, shift, str_s))
             return str_s
         return flag
     except Exception as e:
-        print("Exception in synset ds: ")
-        print(e)
+        logging.info("Exception in synset ds: ")
+        logging.info(e)
         return []
 
 def clean_captions(x):
     try:
         return x.lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "").strip()
     except Exception as e:
-        print("in clean captions: ")
-        print(e)
+        logging.info("Exception in clean captions: ")
+        logging.info(e)
         return ""
 
 def get_dataset_size(shards):
@@ -617,12 +657,19 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
     ])
     if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
         pipeline.extend([
-            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher)),
+            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels)),
             wds.select(filter_no_caption_text),
             # select_count(filter_no_caption_text, selectedCount[0]),
         ])
+    if args.integer_labels:
+        pipeline.extend([
+            wds.map_dict(image=preprocess_img),
+        ])
+    else:
+        pipeline.extend([
+            wds.map_dict(image=preprocess_img, text=preprocess_txt),
+        ])
     pipeline.extend([
-        wds.map_dict(image=preprocess_img, text=preprocess_txt),
         wds.to_tuple("image", "text"),
         wds.batched(args.batch_size, partial=args.ds_filter != "" or not is_train)
     ])
@@ -679,21 +726,25 @@ def my_collate(batch):
     batch = list(filter (lambda x:bool(x)==True, batch[1])) # filter out all the Nones
     # logging.debug("After filter, batch length is {}".format(len(batch)))
     if len_batch > len(batch): # if there are samples missing just use existing members, doesn't work if you reject every sample in a batch
-        logging.debug("Found empty samples in batch")
+        logging.info("Found empty samples in batch")
         diff = len_batch - len(batch)
         for i in range(diff):
             batch = batch + batch[:diff]
     return torch.utils.data.dataloader.default_collate(batch)
 
+def int_collate(batch):
+    #batch is a tuple with BATCH_LEN items
+    #batch[0] is a tuple with 2 items (image, label)
+    for b in batch:
+        if type(b[1]) != int:
+            logging.warning("not int, {}, shifting to 0".format(b[1]))
+            b[1] = 0
+    return torch.utils.data.dataloader.default_collate(batch)
+
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
+    collate_fn = torch.utils.data.dataloader.default_collate if (not args.integer_labels or args.multiclass) else int_collate
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
-    if args.ds_cipher:
-        args.ds_filter = imagenet_cipher
-    elif args.ds_filter != "":
-        var_names = globals()
-        args.ds_filter = var_names[args.ds_filter]
-        args.ds_filter = [clean_captions(a) for a in args.ds_filter]
     dataset = CsvDataset(
         input_filename,
         preprocess_fn,
@@ -706,6 +757,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
         simplecaptions=args.simplecaptions,
         strict=args.strict,
         shift=args.shift_cipher,
+        integer_labels=args.integer_labels,
         sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
@@ -717,8 +769,8 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
         num_workers=args.workers,
         pin_memory=True,
         sampler=sampler,
-        drop_last=is_train
-        # collate_fn=my_collate
+        drop_last=is_train,
+        collate_fn=collate_fn
     )
     dataloader.num_samples = num_samples
     dataloader.num_batches = len(dataloader)
@@ -750,6 +802,15 @@ def get_dataset_fn(data_path, dataset_type):
 def get_data(args, preprocess_fns, epoch=0):
     preprocess_train, preprocess_val = preprocess_fns
     data = {}
+    if args.ds_cipher:
+        args.ds_filter = get_imagenet_cipher()
+    elif args.ds_filter != "":
+        if args.ds_filter == "imagenet_classnames":
+            args.ds_filter = get_imagenet_classnames()
+        else:
+            var_names = globals()
+            args.ds_filter = var_names[args.ds_filter]
+            args.ds_filter = [clean_captions(a) for a in args.ds_filter]
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch)

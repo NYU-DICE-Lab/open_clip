@@ -17,7 +17,6 @@ from torch.utils.checkpoint import checkpoint
 from .timm_model import TimmModel
 from .utils import freeze_batch_norm_2d, to_2tuple
 
-
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -80,6 +79,7 @@ class AttentionPool2d(nn.Module):
         x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3]).permute(2, 0, 1)  # NCHW -> (HW)NC
         x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (HW+1)NC
         x = x + self.positional_embedding[:, None, :].to(x.dtype)  # (HW+1)NC
+        x = x.nan_to_num(nan=1e-5, posinf=1e5, neginf=-1e5)
         x, _ = F.multi_head_attention_forward(
             query=x, key=x, value=x,
             embed_dim_to_check=x.shape[-1],
@@ -99,7 +99,7 @@ class AttentionPool2d(nn.Module):
             training=self.training,
             need_weights=False
         )
-
+        x = x.nan_to_num(nan=1e-5, posinf=1e5, neginf=-1e5)
         return x[0]
 
 
@@ -178,7 +178,9 @@ class ModifiedResNet(nn.Module):
         x = self.relu1(self.bn1(self.conv1(x)))
         x = self.relu2(self.bn2(self.conv2(x)))
         x = self.relu3(self.bn3(self.conv3(x)))
+        x = x.nan_to_num(nan=1e-5, posinf=1e5, neginf=-1e5)
         x = self.avgpool(x)
+        x = x.nan_to_num(nan=1e-5, posinf=1e5, neginf=-1e5)
         return x
 
     def forward(self, x):
@@ -240,6 +242,11 @@ class Transformer(nn.Module):
             ResidualAttentionBlock(width, heads, mlp_ratio, act_layer=act_layer)
             for _ in range(layers)
         ])
+
+    def lock(self, unlocked_groups=0):
+        assert unlocked_groups == 0, 'partial locking not currently supported for this model'
+        for param in self.parameters():
+            param.requires_grad = False
 
     def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
         for r in self.resblocks:
@@ -427,6 +434,9 @@ class CLIP(nn.Module):
     def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
         self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
+
+    def lock_text_tower(self, unlocked_groups=0):
+        self.transformer.lock(unlocked_groups=unlocked_groups)
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):

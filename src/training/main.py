@@ -85,7 +85,7 @@ def main():
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False
     device = init_distributed_device(args)
-
+    args.alt = args.model in ["coca", "xclip"]
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
     if is_master(args):
@@ -139,7 +139,6 @@ def main():
             vssl=args.vssl,
             mlm=args.mlm
         )
-    random_seed(args.seed, args.rank)
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):
         args.model = "xclip"
@@ -147,11 +146,20 @@ def main():
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
-    if args.lock_image and not args.model == "xclip":
+    if args.lock_image and not args.alt:
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
         model.lock_image_tower(
             unlocked_groups=args.lock_image_unlocked_groups,
             freeze_bn_stats=args.lock_image_freeze_bn_stats)
+    
+    #Freeze text tower when we train on integer labels, check for anomalies with alt models
+    if args.integer_labels:
+        args.lock_text = True
+
+    if args.lock_text and not args.alt:
+        # lock text tower as per LiT - https://arxiv.org/abs/2111.07991
+        model.lock_text_tower(
+            unlocked_groups=args.lock_image_unlocked_groups)
 
     if args.grad_checkpointing:
         model.set_grad_checkpointing()
@@ -174,8 +182,9 @@ def main():
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
-        if args.model in ["coca", "xclip"]:
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True, **ddp_args)
+        if args.alt:
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
+            #model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True, **ddp_args)
         else:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
 
@@ -214,7 +223,12 @@ def main():
     if args.resume is not None:
         if os.path.isfile(args.resume):
             checkpoint = torch.load(args.resume, map_location=device)
-            if 'epoch' in checkpoint:
+            if args.fine_tune:
+                sd = checkpoint["state_dict"]
+                if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
+                    sd = {k[len('module.'):]: v for k, v in sd.items()}
+                model.load_state_dict(sd)
+            elif 'epoch' in checkpoint:
                 # resuming a train checkpoint w/ epoch and optimizer state
                 start_epoch = checkpoint["epoch"]
                 sd = checkpoint["state_dict"]
@@ -267,14 +281,23 @@ def main():
         wandb.run.name = str(args.model) + " " + str(args.train_data)
         if args.debug:
             wandb.watch(model, log='all')
+            torch.autograd.set_detect_anomaly(True)
         wandb.save(params_file)
         logging.debug('Finished loading wandb.')
+
+    if args.clamp > 0:
+        for p in model.parameters():
+            if p.requires_grad:
+                p.register_hook(lambda grad: torch.clamp(grad, -args.clamp, args.clamp))
 
     if 'train' not in data:
         evaluate(model, data, start_epoch, args, writer)
         return
 
     for epoch in range(start_epoch, args.epochs):
+        #reseed every epoch for reproducibility, per https://jamesmccaffrey.wordpress.com/2022/01/03/pytorch-training-checkpoint-exact-recovery-reproducibility/
+        random_seed(args.seed, args.rank + epoch)
+
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
