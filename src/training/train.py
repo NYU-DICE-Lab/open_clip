@@ -47,7 +47,6 @@ def unwrap_model(model):
         return model
 
 def train_integer_labels(model, images, labels, device):
-    print(labels)
     criterion = torch.nn.CrossEntropyLoss().to(device=device, non_blocking=True)
     logits = model(images)
     loss = 0
