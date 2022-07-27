@@ -110,7 +110,7 @@ def create_model(
     if model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
         if vssl:
             base_vit = ViT(
-                image_size = imsize,
+                image_size = 256,
                 patch_size = 32,
                 num_classes = 1000,
                 dim = 512,
@@ -126,7 +126,7 @@ def create_model(
             )
             visual_ssl = SimSiam(                 # SimSiam defined externally - needs to be a module that accepts an image of the same dimensions as CLIP and returns a scalar loss
                 enc,
-                image_size = imsize,
+                image_size = 256,
                 hidden_layer = -1
             )
             model = XCLIP(
@@ -134,6 +134,10 @@ def create_model(
                 dim_image = 512,
                 dim_text = 512,
                 dim_latent = 512,
+                num_text_tokens = 49408,
+                text_enc_depth = 6,
+                text_seq_len = 256,
+                text_heads = 8,
                 use_mlm = True,
                 visual_ssl = visual_ssl,           # SSL module passed into CLIP
                 use_all_token_embeds = False,
@@ -153,8 +157,8 @@ def create_model(
                 text_enc_depth = 6,
                 text_seq_len = 256,
                 text_heads = 8,
-                text_has_cls_token = not filip,
-                visual_has_cls_token = not filip,
+                text_has_cls_token = True,
+                visual_has_cls_token = True,
                 use_all_token_embeds = filip,           # whether to use fine-grained contrastive learning (FILIP)
                 decoupled_contrastive_learning = dcl,  # use decoupled contrastive learning (DCL) objective function, removing positive pairs from the denominator of the InfoNCE loss (CLOOB + DCL)
                 extra_latent_projection = elp,         # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)

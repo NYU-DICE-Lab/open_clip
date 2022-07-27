@@ -85,7 +85,6 @@ def main():
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False
     device = init_distributed_device(args)
-    args.alt = args.model in ["coca", "xclip"]
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
     if is_master(args):
@@ -143,7 +142,7 @@ def main():
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):
         args.model = "xclip"
-
+    args.alt = args.model in ["coca", "xclip"]
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
