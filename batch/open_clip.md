@@ -26,6 +26,7 @@ singularity exec --nv \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /scratch/bf996/datasets/fgvc-aircraft-2013b.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
   /bin/bash
@@ -266,6 +267,10 @@ python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/b
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
 
+#### Linear Probe on Int Labels
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/2022_07_25-20_37_03-model_RN50-lr_5e-05-b_128-j_8-p_fp32/checkpoints/epoch_11.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50 --zeroshot-frequency=1 --linear-probe=True --image-size=224
+
 #### Shift Cipher Experiments
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_strict.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
@@ -273,6 +278,10 @@ python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/b
 python -u /scratch/bf996/open_clip/src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..00010}.tar" --train-num-samples 100000 --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=8 --debug --model=RN50
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --shift-cipher=3 --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
+
+#### vssl
+
+python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=vit_large_patch16_224 --vssl=True --local-loss --gather-with-grad
 
 #### WDS TRAINING WITH FILTERING
 

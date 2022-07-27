@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:mi50:8
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=laion50m_coca
-#SBATCH --dependency=afterany:22684973
+#SBATCH --dependency=afterany:22739126
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 
@@ -30,4 +30,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity-rocm.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{7500..22500}.tar" --train-num-samples 50000000 --resume "/scratch/bf996/open_clip/logs/2022_07_23-06_42_44-model_coca-lr_0.0005-b_128-j_8-p_amp/checkpoints/epoch_14.pt" --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --warmup 2000 --batch-size=128 --wd=0.1 --epochs=32 --workers=8 --model=coca --clamp=1e9 --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{07500..22500}.tar" --train-num-samples 50000000 --resume "/scratch/bf996/open_clip/logs/2022_07_23-06_42_44-model_coca-lr_0.0005-b_128-j_8-p_amp/checkpoints/epoch_14.pt" --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --warmup 2000 --batch-size=128 --wd=0.1 --epochs=32 --workers=8 --model=coca --clamp=1e5 --local-loss --gather-with-grad'

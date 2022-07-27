@@ -24,8 +24,9 @@ except:
 
 try:
     from x_clip import CLIP as XCLIP
-    # from vit_pytorch import ViT
-    # from vit_pytorch.extractor import Extractor
+    from x_clip.visual_ssl import SimSiam
+    from vit_pytorch import ViT
+    from vit_pytorch.extractor import Extractor
 except:
     logging.debug("xclip is not installed")
 
@@ -103,32 +104,66 @@ def create_model(
         dcl: bool = False,
         elp: bool = False,
         vssl: bool = False,
-        mlm: bool = False
+        mlm: bool = False,
+        imsize: int = 224
 ):
     if model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
-        enc = timm.create_model(model_name, pretrained=True).to(device=device) if pretrained_image else None
-        if enc:
-            enc = nn.Sequential(*list(enc.children())[:-1])
-        model = XCLIP(
-            image_encoder = enc,
-            dim_image = 512,           # must be set as the same dimensions as the vision transformer above
-            dim_text = 512,
-            dim_latent = 512,
-            num_text_tokens = 49408,
-            text_enc_depth = 6,
-            text_seq_len = 256,
-            text_heads = 8,
-            text_has_cls_token = not filip,
-            visual_has_cls_token = not filip,
-            use_all_token_embeds = filip,           # whether to use fine-grained contrastive learning (FILIP)
-            decoupled_contrastive_learning = dcl,  # use decoupled contrastive learning (DCL) objective function, removing positive pairs from the denominator of the InfoNCE loss (CLOOB + DCL)
-            extra_latent_projection = elp,         # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)
-            use_visual_ssl = vssl,                  # whether to do self supervised learning on iages
-            use_mlm = mlm,                        # use masked language learning (MLM) on text (DeCLIP)
-            #TODO: input correct vals here
-            text_ssl_loss_weight = 0.05,            # weight for text MLM loss
-            image_ssl_loss_weight = 0.05            # weight for image self-supervised learning loss
-        )
+        if vssl:
+            base_vit = ViT(
+                image_size = imsize,
+                patch_size = 32,
+                num_classes = 1000,
+                dim = 512,
+                depth = 6,
+                heads = 16,
+                mlp_dim = 2048,
+                dropout = 0.1,
+                emb_dropout = 0.1
+            )
+            enc = Extractor(
+                base_vit,
+                return_embeddings_only = True
+            )
+            visual_ssl = SimSiam(                 # SimSiam defined externally - needs to be a module that accepts an image of the same dimensions as CLIP and returns a scalar loss
+                enc,
+                image_size = imsize,
+                hidden_layer = -1
+            )
+            model = XCLIP(
+                image_encoder = enc,
+                dim_image = 512,
+                dim_text = 512,
+                dim_latent = 512,
+                use_mlm = True,
+                visual_ssl = visual_ssl,           # SSL module passed into CLIP
+                use_all_token_embeds = False,
+                extra_latent_projection = False,
+                mlm_random_token_prob = 0.1
+            )
+        else:
+            enc = timm.create_model(model_name, pretrained=True).to(device=device) if pretrained_image else None
+            if enc:
+                enc = nn.Sequential(*list(enc.children())[:-1])
+            model = XCLIP(
+                image_encoder = enc,
+                dim_image = 512,           # must be set as the same dimensions as the vision transformer above
+                dim_text = 512,
+                dim_latent = 512,
+                num_text_tokens = 49408,
+                text_enc_depth = 6,
+                text_seq_len = 256,
+                text_heads = 8,
+                text_has_cls_token = not filip,
+                visual_has_cls_token = not filip,
+                use_all_token_embeds = filip,           # whether to use fine-grained contrastive learning (FILIP)
+                decoupled_contrastive_learning = dcl,  # use decoupled contrastive learning (DCL) objective function, removing positive pairs from the denominator of the InfoNCE loss (CLOOB + DCL)
+                extra_latent_projection = elp,         # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)
+                use_visual_ssl = False,             # whether to do self supervised learning on iages
+                use_mlm = mlm,                        # use masked language learning (MLM) on text (DeCLIP)
+                #TODO: input correct vals here
+                text_ssl_loss_weight = 0.05,            # weight for text MLM loss
+                image_ssl_loss_weight = 0.05            # weight for image self-supervised learning loss
+            )
         if precision == "amp" or precision == "fp32":
             model = model.float()
         if precision == "fp16":
@@ -224,12 +259,13 @@ def create_model_and_transforms(
         dcl: bool = False,
         elp: bool = False,
         vssl: bool = False,
-        mlm: bool = False
+        mlm: bool = False,
+        imsize: int = 224
 ):
     model = create_model(
     model_name, pretrained, precision, device, jit,
     force_quick_gelu=force_quick_gelu,
-    pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm
+    pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize
     )
     #FIXME hardcoded size
     if model_name == "coca":

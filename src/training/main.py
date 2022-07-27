@@ -137,7 +137,8 @@ def main():
             dcl=args.dcl,
             elp=args.elp,
             vssl=args.vssl,
-            mlm=args.mlm
+            mlm=args.mlm,
+            imsize=args.image_size if args.image_size else 224
         )
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):

@@ -108,7 +108,7 @@ def clean_integer_label(label):
     if type(label) != int and type(label) != str:
         logging.warning("Expected single or multi integer label, got {} -- mapping to 0".format(label))
         label = 0
-        return label
+        return torch.tensor([label])
     elif type(label) == str and label == "":
         return label
     elif type(label) == str:
@@ -120,7 +120,9 @@ def clean_integer_label(label):
             padding = [-1 for i in range(25 - len(label))]
             label = label + padding
     # logging.info(len(label))
-    return torch.tensor(label)
+        return torch.tensor(label)
+    else:
+        return torch.tensor([label])
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
@@ -742,7 +744,7 @@ def int_collate(batch):
     return torch.utils.data.dataloader.default_collate(batch)
 
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
-    collate_fn = torch.utils.data.dataloader.default_collate if (not args.integer_labels or args.multiclass) else int_collate
+    collate_fn = torch.utils.data.dataloader.default_collate
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
     dataset = CsvDataset(
