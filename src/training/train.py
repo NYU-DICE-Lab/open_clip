@@ -50,7 +50,11 @@ def train_integer_labels(model, images, labels, device):
     criterion = torch.nn.CrossEntropyLoss().to(device=device, non_blocking=True)
     logits = model(images)
     loss = 0
-    if len(labels[0]) > 1:
+    try:
+        lablen = len(labels[0])
+    except:
+        lablen = 0
+    if lablen > 1:
         for idx, label in enumerate(labels):
             pred = logits[idx]
             for tag in label:
@@ -73,6 +77,36 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         rank=args.rank,
         world_size=args.world_size,
         use_horovod=args.horovod)
+
+    #IMAGENET TUNING LOOP
+    if args.imagenet_tune_freq > 0 and epoch % args.imagenet_tune_freq == 0:
+        optimizer_tune = optim.AdamW(
+            [
+                {"params": gain_or_bias_params, "weight_decay": 0.},
+                {"params": rest_params, "weight_decay": args.wd},
+            ],
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
+            eps=args.eps,
+        )
+        logging.info("ImageNet-tuning of vision head, epoch {}".format(epoch))
+        for i, batch in enumerate(data["imagenet-train"].dataloader):
+            images, labels = batch
+            labels = labels.to(device=device, non_blocking=True)
+            images = images.to(device=device, non_blocking=True)
+            optimizer_tune.zero_grad()
+            imagenet_loss = train_integer_labels(unwrap_model(model).visual, images, labels, device)
+
+            if i % 100 == 0:
+                logging.info("Batch {}, total loss {}".format(i, imagenet_loss))
+
+            if scaler is not None:
+                scaler.scale(imagenet_loss).backward()
+                scaler.step(optimizer_tune)
+                scaler.update()
+            else:
+                imagenet_loss.backward()
+                optimizer_tune.step()
 
     data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
     dataloader = data['train'].dataloader
@@ -110,7 +144,13 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             )
 
     batchset = list()
+
+    #MAIN TRAINING LOOP
     for i, batch in enumerate(dataloader):
+        if args.ramping:
+            if (i + 1) * len(batch) * max(args.world_size, 1) > int((args.train_num_samples * (epoch + 1)) / args.epochs):
+                print("Ramping: stopping epoch {} at sample {}".format(epoch, i * len(batch)))
+                return
         #HOUSEKEEPING
         if args.ds_filter and args.debug:
             for b in batch[1].tolist():
@@ -194,9 +234,6 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                         continue
                 optimizer.step()
 
-        #HOUSEKEEPING
-        if args.ds_filter and args.debug:
-            logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         if args.model not in ["coca", "xclip"]:
             with torch.no_grad():
@@ -247,6 +284,9 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             batch_time_m.reset()
             data_time_m.reset()
     # end for
+    #HOUSEKEEPING
+    if args.ds_filter and args.debug:
+        logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
 
 def evaluate(model, data, epoch, args, tb_writer=None):
     metrics = {}

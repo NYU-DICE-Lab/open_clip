@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=yfcc_intlabels
-#SBATCH --dependency=afterany:22179172
+#SBATCH --dependency=afterany:22820629
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

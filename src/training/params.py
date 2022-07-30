@@ -181,6 +181,24 @@ def parse_args():
         help="Path to stanford cars (validation or test folder) for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--imagenet-train",
+        type=str,
+        default=None,
+        help="Path to ImageNet training data",
+    )
+    parser.add_argument(
+        "--imagenet-tune-freq",
+        type=int,
+        default=0,
+        help="How many epochs to fine-tune image head on ImageNet while training",
+    )
+    parser.add_argument(
+        "--ramping",
+        type=bool,
+        default=False,
+        help="Ramp up to full dataset length over the course of the training run",
+    )        
+    parser.add_argument(
         "--flowers",
         type=str,
         default=None,

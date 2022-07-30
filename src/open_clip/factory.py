@@ -175,8 +175,8 @@ def create_model(
             convert_weights_to_fp16(model)
         model.to(device=device)
         return model
-    if model_name == "coca":
-        enc = timm.create_model('vit_large_patch32_224_in21k', pretrained=True).to(device=device)
+    elif model_name == "coca":
+        enc = timm.create_model('vit_large_patch16_224', pretrained=True).to(device=device)
         enc = nn.Sequential(*list(enc.children())[:-1])
         model = CoCa(
             dim = 512,                     # model dimension
@@ -197,6 +197,9 @@ def create_model(
             convert_weights_to_fp16(model)
         model.to(device=device)
         return model
+
+    #SIMCLR
+    #https://dl.fbaipublicfiles.com/slip/simclr_base_25ep.pt
     
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
     if pretrained.lower() == 'openai':

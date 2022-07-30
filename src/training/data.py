@@ -108,7 +108,7 @@ def clean_integer_label(label):
     if type(label) != int and type(label) != str:
         logging.warning("Expected single or multi integer label, got {} -- mapping to 0".format(label))
         label = 0
-        return torch.tensor([label])
+        return torch.tensor(label)
     elif type(label) == str and label == "":
         return label
     elif type(label) == str:
@@ -122,7 +122,7 @@ def clean_integer_label(label):
     # logging.info(len(label))
         return torch.tensor(label)
     else:
-        return torch.tensor([label])
+        return torch.tensor(label)
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
@@ -383,6 +383,7 @@ def get_imagenet(args, preprocess_fns, split):
     elif is_train:
         data_path = args.imagenet_train
         preprocess_fn = preprocess_train
+        dataset = datasets.ImageFolder(data_path, transform=preprocess_train)
     else:
         if split == "val":
             data_path = args.imagenet_val
@@ -820,6 +821,9 @@ def get_data(args, preprocess_fns, epoch=0):
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
             args, preprocess_val, is_train=False)
+    
+    if args.imagenet_train is not None:
+        data["imagenet-train"] = get_imagenet(args, preprocess_fns, "train")
 
     if args.imagenet_val is not None:
         data["imagenet-val"] = get_imagenet(args, preprocess_fns, "val")

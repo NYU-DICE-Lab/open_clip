@@ -182,9 +182,8 @@ def main():
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
-        if args.alt:
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
-            #model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True, **ddp_args)
+        if args.model in ["xclip"]:
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True, **ddp_args)
         else:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
 

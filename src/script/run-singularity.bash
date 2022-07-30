@@ -16,6 +16,7 @@ singularity \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /scratch/bf996/datasets/fgvc-aircraft-2013b.sqf:ro \
   --overlay /scratch/bf996/datasets/flowers-102.sqf:ro \
   --overlay /scratch/bf996/datasets/stanford_cars.sqf:ro \

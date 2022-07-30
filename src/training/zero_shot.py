@@ -103,11 +103,10 @@ def run(model, classifier, dataloader, args, idx=None):
             with autocast():
                 # predict
                 if args.distributed and not args.horovod:
-                    if args.linear_probe or args.integer_labels:
-                        logits = model(image_features)
-                        logits = logits[idx]
-                        # print("new logits length")
-                        # print(len(logits))
+                    if args.linear_probe:
+                        logits = model(images)
+                    elif args.integer_labels:
+                        logits = model.visual(images)
                     elif args.model == "coca":
                         texts = torch.randint(100, (5, len(images))).to(args.device)
                         image_features = model.module(texts, images, return_embeddings=True)
@@ -123,8 +122,10 @@ def run(model, classifier, dataloader, args, idx=None):
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
                 else:
-                    if args.linear_probe or args.integer_labels:
+                    if args.linear_probe:
                         logits = model(images)
+                    elif args.integer_labels:
+                        logits = model.visual(images)
                     elif args.model == "coca":
                         texts = torch.randint(100, (5, len(images))).to(args.device)
                         image_features = model(texts, images, return_embeddings=True)
@@ -139,9 +140,11 @@ def run(model, classifier, dataloader, args, idx=None):
                         image_features = model.encode_image(images)
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
-
             # measure accuracy
             # logging.debug("size of logits: {}, size of target: {}".format(logits.size(), target.size()))
+            # print(logits.size(), target.size())
+            # if idx is not None:
+            #     logits = logits[:, idx]
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
@@ -337,6 +340,7 @@ def zero_shot_eval(model, data, epoch, args):
         logging.info("len imagenets {}".format(len(imagenets)))
         try:
             imagenets = np.array(imagenets)
+            results['imagenet-average-robustness'] = np.average(imagenets)
             results['imagenet-effective-robustness'] = np.divide(np.average(imagenets), results['imagenet-zeroshot-val-top1'])
         except Exception as e:
             logging.info("error calculating effective robustness: ")

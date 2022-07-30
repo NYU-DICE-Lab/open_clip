@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=laion_intlabels
-#SBATCH --dependency=afterany:22179172
+#SBATCH --dependency=afterany:22820616
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 
@@ -30,4 +30,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --precision=fp32 --epochs=32 --workers=8 --model=RN50-in1k --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --precision=fp32 --epochs=32 --workers=8 --model=RN50-in1k --resume "/scratch/bf996/open_clip/logs/2022_07_26-13_44_07-model_RN50-in1k-lr_0.0005-b_128-j_8-p_fp32/checkpoints/epoch_7.pt" --local-loss --gather-with-grad'
