@@ -187,6 +187,45 @@ class CsvDataset(Dataset):
         texts = tokenize(texts)[0]
         return images, texts
 
+def _convert_to_rgb(image):
+    return image.convert('RGB')
+    
+class ImageAugCSVDataset(CsvDataset):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
+        super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep)
+        self.augment = torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(224, scale=(0.08, 1.)),
+            torchvision.transforms.RandomApply([
+                torchvision.transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            torchvision.transforms.RandomGrayscale(p=0.2),
+            torchvision.transforms.RandomApply([torchvision.transforms.GaussianBlur(5, sigma=(.1, 2.))], p=0.5),
+            torchvision.transforms.RandomHorizontalFlip(),
+            _convert_to_rgb,
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean = (0.48145466, 0.4578275, 0.40821073), std = (0.26862954, 0.26130258, 0.27577711)),
+        ])
+
+    def __getitem__(self, idx):
+        try:
+            img = Image.open(str(self.images[idx]))
+        except Exception as e:
+            logging.warning("Exception in csv dataset: {}".format(e))
+            logging.warning("Missing or unreadable image at {}, attempting to skip.".format(str(self.images[idx])))
+            try:
+                img = Image.open(str(self.images[idx+1]))
+            except:
+                logging.warning("Skip failed. Generating dummy image and caption.".format(str(self.images[idx])))
+                imarray = np.random.rand(224,224,3) * 255
+                img = Image.fromarray(imarray.astype('uint8')).convert('RGB')
+        try:
+            aug1 = self.augment(img)
+            aug2 = self.augment(img)
+        except Exception as e:
+            logging.info("Exception during augmentation: {}".format(e))
+            aug1 = aug2 = img
+        return aug1, aug2
+
 class SharedEpoch:
     def __init__(self, epoch: int = 0):
         self.shared_epoch = Value('i', epoch)
@@ -748,20 +787,36 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
     collate_fn = torch.utils.data.dataloader.default_collate
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
-    dataset = CsvDataset(
-        input_filename,
-        preprocess_fn,
-        img_key=args.csv_img_key,
-        caption_key=args.csv_caption_key,
-        csvfilter=args.ds_filter,
-        csvscrambled=args.csv_scrambled,
-        csvcleaned=args.csv_cleaned,
-        dscipher=args.ds_cipher,
-        simplecaptions=args.simplecaptions,
-        strict=args.strict,
-        shift=args.shift_cipher,
-        integer_labels=args.integer_labels,
-        sep=args.csv_separator)
+    if args.sim_clr:
+        dataset = ImageAugCSVDataset(
+            input_filename,
+            preprocess_fn,
+            img_key=args.csv_img_key,
+            caption_key=args.csv_caption_key,
+            csvfilter=args.ds_filter,
+            csvscrambled=args.csv_scrambled,
+            csvcleaned=args.csv_cleaned,
+            dscipher=args.ds_cipher,
+            simplecaptions=args.simplecaptions,
+            strict=args.strict,
+            shift=args.shift_cipher,
+            integer_labels=args.integer_labels,
+            sep=args.csv_separator)
+    else:
+        dataset = CsvDataset(
+            input_filename,
+            preprocess_fn,
+            img_key=args.csv_img_key,
+            caption_key=args.csv_caption_key,
+            csvfilter=args.ds_filter,
+            csvscrambled=args.csv_scrambled,
+            csvcleaned=args.csv_cleaned,
+            dscipher=args.ds_cipher,
+            simplecaptions=args.simplecaptions,
+            strict=args.strict,
+            shift=args.shift_cipher,
+            integer_labels=args.integer_labels,
+            sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
     shuffle = is_train and sampler is None
