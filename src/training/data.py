@@ -94,6 +94,28 @@ cipher_dict = {
     '?': '?',
 }
 
+total_count = [0]
+
+def get_total_obj():
+    return globals()['total_count']
+
+class TotalSize:
+    """Keep track of the total size of samples."""
+
+    def __init__(self):
+        """Create a TotalSize counter."""
+        self.count = 0
+
+    def __call__(self, sample):
+        """Add sample to the counter.
+        :param sample: undecoded sample to be added
+        """
+        self.count += 1
+        total_count[0] += 1
+        if total_count[0] % 1000 == 0:
+            logging.debug("Total samples seen is now {} (times number of workers)".format(total_count[0]))
+        return sample
+
 def select_count(data, predicate, count):
     """Select samples based on a predicate.
     :param data: source iterator
@@ -114,6 +136,12 @@ def clean_integer_label(label):
     elif type(label) == str:
         label = label.split(", ")
         label = [int(l) for l in label]
+        # sm, nsm = get_match_count()
+        # if len(label) == 1:
+        #     sm[0] += 1
+        # else:
+        #     nsm[0] += 1
+        # print(sm, nsm)
         if len(label) > 25:
             label = label[:24]
         if len(label) < 25:
@@ -222,8 +250,11 @@ class ImageAugCSVDataset(CsvDataset):
             aug1 = self.augment(img)
             aug2 = self.augment(img)
         except Exception as e:
-            logging.info("Exception during augmentation: {}".format(e))
-            aug1 = aug2 = img
+            logging.info("Exception during augmentation: {} \n Generating dummy image and caption".format(e))
+            imarray = np.random.rand(224,224,3) * 255
+            img = Image.fromarray(imarray.astype('uint8')).convert('RGB')
+            aug1 = self.augment(img)
+            aug2 = self.augment(img)
         return aug1, aug2
 
 class SharedEpoch:
@@ -640,8 +671,48 @@ class ResampledShards2(IterableDataset):
         for _ in range(self.nshards):
             yield dict(url=self.rng.choice(self.urls))
 
+def replace_with_image(d):
+    d['text'] = d['image']
+    return d
 
-def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
+def get_wds_dataset_simclr(args, is_train, epoch=0, floor=False, total=None, num_samples=0, shared_epoch=0, pipeline=None):
+    preprocess_img = torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(224, scale=(0.08, 1.)),
+            torchvision.transforms.RandomApply([
+                torchvision.transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            torchvision.transforms.RandomGrayscale(p=0.2),
+            torchvision.transforms.RandomApply([torchvision.transforms.GaussianBlur(5, sigma=(.1, 2.))], p=0.5),
+            torchvision.transforms.RandomHorizontalFlip(),
+            _convert_to_rgb,
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean = (0.48145466, 0.4578275, 0.40821073), std = (0.26862954, 0.26130258, 0.27577711)),
+    ])
+    pipeline.extend([
+        wds.map(replace_with_image),
+        wds.map_dict(image=preprocess_img, text=preprocess_img, handler=log_and_continue),
+    ])
+    pipeline.extend([
+        wds.to_tuple("image", "text"),
+        wds.batched(args.batch_size, partial=args.ds_filter != "" or not is_train)
+    ])
+    dataset = wds.DataPipeline(*pipeline)
+    num_batches = math.ceil(num_samples / args.batch_size)
+
+    dataloader = wds.WebLoader(
+        dataset,
+        batch_size=None,
+        shuffle=False,
+        num_workers=args.workers,
+        persistent_workers=True,
+    )
+
+    dataloader.num_batches = num_batches
+    dataloader.num_samples = num_samples
+
+    return DataInfo(dataloader=dataloader, shared_epoch=shared_epoch)
+
+def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=None):
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
     resampled = getattr(args, 'dataset_resampled', False) and is_train
@@ -697,6 +768,12 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.decode("pilrgb", handler=log_and_continue),
         wds.rename(image="jpg;png", text="txt"),
     ])
+    if args.sim_clr:
+        return get_wds_dataset_simclr(args, is_train, epoch=epoch, floor=floor, total=total, num_samples=num_samples, shared_epoch=shared_epoch, pipeline=pipeline)
+    if total:
+        pipeline.extend([
+            wds.map_dict(image=total)
+        ])
     if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
         pipeline.extend([
             wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels)),
@@ -783,7 +860,7 @@ def int_collate(batch):
             b[1] = 0
     return torch.utils.data.dataloader.default_collate(batch)
 
-def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
+def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
     collate_fn = torch.utils.data.dataloader.default_collate
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
@@ -860,6 +937,7 @@ def get_dataset_fn(data_path, dataset_type):
 def get_data(args, preprocess_fns, epoch=0):
     preprocess_train, preprocess_val = preprocess_fns
     data = {}
+    total = TotalSize()
     if args.ds_cipher:
         args.ds_filter = get_imagenet_cipher()
     elif args.ds_filter != "":
@@ -871,11 +949,11 @@ def get_data(args, preprocess_fns, epoch=0):
             args.ds_filter = [clean_captions(a) for a in args.ds_filter]
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
-            args, preprocess_train, is_train=True, epoch=epoch)
+            args, preprocess_train, is_train=True, epoch=epoch, total=total)
 
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
-            args, preprocess_val, is_train=False)
+            args, preprocess_val, is_train=False, total=None)
     
     if args.imagenet_train is not None:
         data["imagenet-train"] = get_imagenet(args, preprocess_fns, "train")
@@ -909,5 +987,6 @@ def get_data(args, preprocess_fns, epoch=0):
 
     if args.food is not None:
         data["food"] = get_torchvision(args, preprocess_fns, "food")
-
+    if total is not None:
+        data["total"] = total
     return data

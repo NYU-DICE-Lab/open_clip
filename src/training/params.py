@@ -197,7 +197,13 @@ def parse_args():
         type=bool,
         default=False,
         help="Ramp up to full dataset length over the course of the training run",
-    )        
+    )
+    parser.add_argument(
+        "--dry-run",
+        type=bool,
+        default=False,
+        help="Load data but do not actually train model",
+    )             
     parser.add_argument(
         "--flowers",
         type=str,
@@ -322,6 +328,11 @@ def parse_args():
         default=False,
         action='store_true',
         help="Lock full text tower by disabling gradients.",
+    )
+    parser.add_argument(
+        "--sim-clr",
+        default=False,
+        help="Use simclr loss",
     )
     parser.add_argument(
         "--integer-labels",

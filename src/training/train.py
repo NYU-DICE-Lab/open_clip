@@ -16,9 +16,10 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss, tokenize
+from open_clip import ClipLoss, tokenize, SIMCLRLoss, IntLoss
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
+from .data import get_total_obj
 
 from grad_cache_vl.grad_cache import GradCache
 
@@ -46,68 +47,61 @@ def unwrap_model(model):
     else:
         return model
 
-def train_integer_labels(model, images, labels, device):
-    criterion = torch.nn.CrossEntropyLoss().to(device=device, non_blocking=True)
+def train_integer_labels(model, images, labels, device, loss):
     logits = model(images)
-    loss = 0
-    try:
-        lablen = len(labels[0])
-    except:
-        lablen = 0
-    if lablen > 1:
-        for idx, label in enumerate(labels):
-            pred = logits[idx]
-            for tag in label:
-                if tag == -1:
-                    continue
-                else:
-                    loss = loss + criterion(pred, tag)
-    else:
-        loss = criterion(logits, labels)
-    return loss
+    return loss(logits, labels)
 
-def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None):
+def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None, sim_clr=False):
     device = torch.device(args.device)
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     model.train()
-    loss = ClipLoss(
-        local_loss=args.local_loss,
-        gather_with_grad=args.gather_with_grad,
-        cache_labels=True,
-        rank=args.rank,
-        world_size=args.world_size,
-        use_horovod=args.horovod)
+    #TODO: implement temperature for SIMCLR
+    if args.integer_labels:
+        loss = IntLoss(
+            args,
+            device
+        )
+    elif sim_clr:
+        loss = SIMCLRLoss(
+            temperature=0.1,
+            rank=args.rank,
+            world_size=args.world_size
+        )
+    else:
+        loss = ClipLoss(
+            local_loss=args.local_loss,
+            gather_with_grad=args.gather_with_grad,
+            cache_labels=True,
+            rank=args.rank,
+            world_size=args.world_size,
+            use_horovod=args.horovod)
 
     #IMAGENET TUNING LOOP
     if args.imagenet_tune_freq > 0 and epoch % args.imagenet_tune_freq == 0:
-        optimizer_tune = optim.AdamW(
-            [
-                {"params": gain_or_bias_params, "weight_decay": 0.},
-                {"params": rest_params, "weight_decay": args.wd},
-            ],
-            lr=args.lr,
-            betas=(args.beta1, args.beta2),
-            eps=args.eps,
+        intloss = IntLoss(
+            args,
+            device
         )
         logging.info("ImageNet-tuning of vision head, epoch {}".format(epoch))
         for i, batch in enumerate(data["imagenet-train"].dataloader):
             images, labels = batch
             labels = labels.to(device=device, non_blocking=True)
             images = images.to(device=device, non_blocking=True)
-            optimizer_tune.zero_grad()
-            imagenet_loss = train_integer_labels(unwrap_model(model).visual, images, labels, device)
+            args.optimizer_tune.zero_grad()
+            imagenet_loss = train_integer_labels(unwrap_model(model).visual, images, labels, device, intloss)
 
             if i % 100 == 0:
                 logging.info("Batch {}, total loss {}".format(i, imagenet_loss))
 
             if scaler is not None:
                 scaler.scale(imagenet_loss).backward()
-                scaler.step(optimizer_tune)
+                scaler.step(args.optimizer_tune)
                 scaler.update()
             else:
                 imagenet_loss.backward()
-                optimizer_tune.step()
+                args.optimizer_tune.step()
 
+    #MAIN TRAINING LOOP PREP
     data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
     dataloader = data['train'].dataloader
     num_batches_per_epoch = dataloader.num_batches
@@ -118,6 +112,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     data_time_m = AverageMeter()
     end = time.time()
 
+    #Gradient Caching
     if args.gc:
         if args.horovod:
             print("horovod is not currently enabled for gradient caching")
@@ -144,13 +139,11 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             )
 
     batchset = list()
+    in1k_sm_list = [0]
+    in1k_nsm_list = [0]
 
     #MAIN TRAINING LOOP
     for i, batch in enumerate(dataloader):
-        if args.ramping:
-            if (i + 1) * len(batch) * max(args.world_size, 1) > int((args.train_num_samples * (epoch + 1)) / args.epochs):
-                print("Ramping: stopping epoch {} at sample {}".format(epoch, i * len(batch)))
-                return
         #HOUSEKEEPING
         if args.ds_filter and args.debug:
             for b in batch[1].tolist():
@@ -168,13 +161,35 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             logging.debug("skipping short batch")
             continue
         data_time_m.update(time.time() - end)
+        if args.dry_run:
+            if args.integer_labels:
+                for t in texts:
+                    if t[1] == -1:
+                        in1k_sm_list[0] += 1
+                    else:
+                        in1k_nsm_list[0] += 1
+            if i % 100 == 0:
+                logging.info("Dry run, batch {} of {}".format(i, num_batches_per_epoch))
+                if args.integer_labels:
+                    logging.info("In1k Matches = {} ({} strict, {} not)".format(in1k_sm_list[0] + in1k_nsm_list[0], in1k_sm_list[0], in1k_nsm_list[0]))
+                    # logging.info("Total samples processed: {}".format(get_total_obj() * args.workers))
+            continue
         optimizer.zero_grad()
 
         # LOSS
         with autocast():
             if args.integer_labels:
-                total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device)
+                total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device, loss)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            elif args.sim_clr:
+                #"TEXTS" is actually another image file, in the case of SIMCLR                    
+                outputs = unwrap_model(model)(images, texts)
+                total_loss = loss(outputs)
+                ssl_loss = total_loss['ssl_loss']
+                acc = total_loss['ssl_acc']
+                if i % 100 == 0:
+                    logging.info("SSL ACC: {}".format(acc))
+                total_loss = total_loss['loss']
             elif args.gc:
                 if args.alt:
                     raise("gradient caching not supported yet for this model, sorry!")
@@ -193,7 +208,6 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                         images = images,
                         return_loss = True  # set this to True to get the full caption + contrastive loss
                     )
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)  
             else:                    
                 image_features, text_features, logit_scale = model(images, texts)
                 total_loss = loss(image_features, text_features, logit_scale)
@@ -235,7 +249,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 optimizer.step()
 
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
-        if args.model not in ["coca", "xclip"]:
+        if not args.alt:
             with torch.no_grad():
                 unwrap_model(model).logit_scale.clamp_(0, math.log(100))
         batch_time_m.update(time.time() - end)
@@ -283,10 +297,20 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+            # Early stopping of epoch if ramping condition is met
+            if args.ramping:
+                if percent_complete > (epoch + 1) * 5:
+                    print("Ramping: stopping epoch early")
+                    return
     # end for
     #HOUSEKEEPING
     if args.ds_filter and args.debug:
         logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
+    if args.integer_labels:
+        logging.info("In1k strict match count was {}, non_strict was {}".format(in1k_sm_list[0], in1k_nsm_list[0]))
+        if args.wandb:
+            assert wandb is not None, 'Please install wandb.'
+            wandb.log({"in1k_strict_match": in1k_sm_list[0], 'in1k_non_strict_match': in1k_nsm_list[0]})
 
 def evaluate(model, data, epoch, args, tb_writer=None):
     metrics = {}

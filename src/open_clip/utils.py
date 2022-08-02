@@ -4,6 +4,53 @@ import collections.abc
 from torch import nn as nn
 from torchvision.ops.misc import FrozenBatchNorm2d
 
+import numpy as np
+import os
+import random
+import shutil
+import torch
+import torch.distributed as dist
+import torch.autograd as autograd
+
+from PIL import ImageFilter
+
+class GatherLayer(autograd.Function):
+    """
+    Gather tensors from all workers with support for backward propagation:
+    This implementation does not cut the gradients as torch.distributed.all_gather does.
+    """
+
+    @staticmethod
+    def forward(ctx, x):
+        output = [torch.zeros_like(x) for _ in range(torch.distributed.get_world_size())]
+        torch.distributed.all_gather(output, x)
+        return tuple(output)
+
+    @staticmethod
+    def backward(ctx, *grads):
+        all_gradients = torch.stack(grads)
+        torch.distributed.all_reduce(all_gradients)
+        return all_gradients[torch.distributed.get_rank()]
+
+def all_gather_batch_with_grad(tensors, world_size):
+        """
+        Performs all_gather operation on the provided tensors.
+        Graph remains connected for backward grad computation.
+        """
+        # Queue the gathered tensors
+        # There is no need for reduction in the single-proc case
+        if world_size == 1:
+            return tensors
+        tensor_list = []
+        output_tensor = []
+
+        for tensor in tensors:
+            tensor_all = GatherLayer.apply(tensor)
+            tensor_list.append(tensor_all)
+
+        for tensor_all in tensor_list:
+            output_tensor.append(torch.cat(tensor_all, dim=0))
+        return output_tensor
 
 def freeze_batch_norm_2d(module, module_match={}, name=''):
     """

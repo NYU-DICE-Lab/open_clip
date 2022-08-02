@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion_subset_%j.log
+#SBATCH --output=laion150m-in1k-integerlabels-strict-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -8,7 +8,7 @@
 #SBATCH --mem=128GB
 #SBATCH --gres=gpu:4
 #SBATCH --wait-all-nodes=1
-#SBATCH --job-name=laion_subset_training
+#SBATCH --job-name=laion150m-in1k-integerlabels-strict
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

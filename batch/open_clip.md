@@ -15,7 +15,7 @@ pip install -r requirements-training.txt;
 ```bash
 cd /scratch/bf996/open_clip
 
-singularity --nv exec \
+singularity exec --nv \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
   --overlay /scratch/bf996/datasets/imagenetv2-matched-frequency-format-val.sqf:ro \
@@ -32,8 +32,11 @@ singularity --nv exec \
   /bin/bash
 
 source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
+```
 
-#IF RUNNING ON CPU
+```bash
+#IF SINGLE GPU
+unset SLURM_NTASKS;
 ```
 
 ### SLURM CPU
@@ -58,6 +61,26 @@ singularity exec \
   /bin/bash
 
 source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin"; unset SLURM_NTASKS;
+```
+
+### ROCM
+
+```bash
+singularity \
+    exec --rocm \
+    --bind $tmp:$HOME/.config/miopen \
+  $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
+  --overlay /scratch/bf996/singularity_containers/openclip_env_rocm.ext3:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
+  --overlay /scratch/bf996/datasets/fgvc-aircraft-2013b.sqf:ro \
+  --overlay /scratch/bf996/datasets/flowers-102.sqf:ro \
+  --overlay /scratch/bf996/datasets/stanford_cars.sqf:ro \
+  --overlay /scratch/bf996/datasets/food-101.sqf:ro \
+  --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
+  --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
+  --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
+  /scratch/work/public/singularity/hudson/images/rocm4.5.2-ubuntu20.04.3.sif \
+  /bin/bash
 ```
 
 ### Commands
@@ -231,7 +254,11 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" 
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/2022_07_20-13_26_43-model_timm-swin_base_patch4_window7_224-lr_0.0005-b_256-j_8-p_amp/checkpoints/epoch_16.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-swin_base_patch4_window7_224 --pretrained-image;
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-shiftcipher-ep14-26/checkpoints/epoch_26.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --shift-cipher=3 --zeroshot-frequency=1 --model=RN50;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-simplenounadj-ep24-28-redux/checkpoints/epoch_26.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=RN50;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-filip-ep1-23/checkpoints/epoch_23.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model="resnet50" --filip=True;
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/coca-ep8-11/checkpoints/epoch_11.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch"  --zeroshot-frequency=1 --model="coca"
 
@@ -239,11 +266,7 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/effnet-ep6/checkpoints/epoch_6.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=timm-tf_efficientnetv2_xl_in21ft1k --pretrained-image;
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/declip-ViT-B-32-ep1-8/checkpoints/epoch_7.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=vit_base_patch32_224 --mlm=True;
-
-#### Simple Captions Validation
-
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-simplenounadj-ep27-32-bugged/checkpoints/epoch_28.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-vit-b-32-declip-ep21-32/checkpoints/epoch_32.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=vit_base_patch32_224 --mlm=True;
 
 #### Shift Cipher Validation
 
@@ -289,19 +312,31 @@ resnext101_64x4d
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --simplecaptions=True --csv-cleaned=True --zeroshot-frequency=2 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=16 --debug --model=RN50
 
+#### SINGLE NODE TRAINING with SIMCLR
+
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --sim-clr=True --save-frequency 1 --warmup 2000 --batch-size=32 --epochs=16 --workers=8 --model="vit_base_patch16_224" --use-bn-sync
+
 #### Single Node Training with Integer Multiclass labels
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_mc_subset_3965496.csv" --csv-separator "," --integer-labels --multiclass --csv-caption-key="in1k_subset_mc" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
 
-#### Multi-Node Training with Integer Single-class labels
+#### Single Node Dry Run with Integer Labels
 
-torchrun --nproc_per_node=2 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --report-to wandb --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_subset_3965496.csv" --csv-separator "," --integer-labels  --csv-caption-key="in1k_subset" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=512 --epochs=32 --workers=4 --model=RN50-in1k --local-loss --gather-with-grad
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{00000..00010}.tar" --train-num-samples 100000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=1 --workers=1 --model=RN50 --dry-run=True --precision=fp32
+
+#### Multi-Node Training with Integer labels
+
+torchrun --nproc_per_node=2 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_subset_3965496.csv" --csv-separator "," --integer-labels  --csv-caption-key="in1k_subset" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=RN50-in1k
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_mc_subset_3965496.csv" --csv-separator "," --integer-labels --multiclass  --csv-caption-key="in1k_subset_mc" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=timm-vit_base_patch16_224_1k --pretrained-image
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/yfcc_ss_nb/df_in1k_mc_subset_3965496.csv" --csv-separator "," --integer-labels --multiclass  --csv-caption-key="in1k_subset_mc" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=timm-vit_base_patch16_224_1k --pretrained-image --strict=True
 
 #### Linear Probe on Int Labels
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/2022_07_28-13_44_31-model_RN50-in1k-lr_0.0005-b_128-j_8-p_fp32/checkpoints/epoch_12.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --model=RN50-in1k --zeroshot-frequency=1 --integer-labels
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-integerlabels-multiclass-ep8-14/checkpoints/epoch_14.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --model=RN50-in1k --zeroshot-frequency=1 --integer-labels
 
 #### Shift Cipher Experiments
 

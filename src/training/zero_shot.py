@@ -52,7 +52,11 @@ def zero_shot_classifier(model, classnames, templates, args):
                 elif args.model in ["xclip"]:
                     images = torch.rand(len(texts), 3, model.module.image_size, model.module.image_size).to(args.device)
                     class_embeddings = model.module(texts, images, return_encodings=True)
-                    class_embedding = l2norm(model.module.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)                
+                    if args.filip:
+                        lat = model.module.to_text_latent(class_embeddings[0][:, 1:]).mean(dim=0)
+                        class_embedding = l2norm(lat).mean(dim=0)
+                    else:
+                        class_embedding = l2norm(model.module.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)          
                 else:
                     class_embeddings = model.module.encode_text(texts)
                     class_embedding = F.normalize(class_embeddings, dim=-1).mean(dim=0)
@@ -67,7 +71,11 @@ def zero_shot_classifier(model, classnames, templates, args):
                 elif args.model in ["xclip"]:
                     images = torch.rand(len(texts), 3, model.image_size, model.image_size).to(args.device)
                     class_embeddings = model(texts, images, return_encodings=True)
-                    class_embedding = l2norm(model.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)
+                    if args.filip:
+                        lat = model.to_text_latent(class_embeddings[0][:, 1:]).mean(dim=0)
+                        class_embedding = l2norm(lat).mean(dim=0)
+                    else:
+                        class_embedding = l2norm(model.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)
                 else:
                     class_embeddings = model.encode_text(texts)
                     class_embedding = F.normalize(class_embeddings, dim=-1).mean(dim=0)
@@ -115,8 +123,11 @@ def run(model, classifier, dataloader, args, idx=None):
                     elif args.model == "xclip":
                         texts = torch.randint(100, (len(images), 5)).to(args.device)
                         image_features = model.module(texts, images, return_encodings=True)
-                        image_features = l2norm(model.module.to_visual_latent(image_features[1][:, 0]))
-                        logits = model.module.temperature.exp() * image_features @ classifier                             
+                        if args.filip:
+                            image_features = l2norm(model.module.to_visual_latent(image_features[1][:, 1:])).mean(dim=1)
+                        else:
+                            image_features = l2norm(model.module.to_visual_latent(image_features[1][:, 0]))
+                        logits = model.module.temperature.exp() * image_features @ classifier
                     else:
                         image_features = model.module.encode_image(images)
                         image_features = F.normalize(image_features, dim=-1)
@@ -134,7 +145,11 @@ def run(model, classifier, dataloader, args, idx=None):
                     elif args.model == "xclip":
                         texts = torch.randint(100, (len(images), 5)).to(args.device)
                         image_features = model(texts, images, return_encodings=True)
-                        image_features = l2norm(model.to_visual_latent(image_features[1][:, 0]))
+                        if args.filip:
+                            image_features = l2norm(model.to_visual_latent(image_features[1][:, 1:])).mean(dim=1)
+                        else:
+                            image_features = l2norm(model.to_visual_latent(image_features[1][:, 0]))
+                        #logging.info("size of image_features {}, size of classifier {}".format(image_features.size(), classifier.size()))
                         logits = model.temperature.exp() * image_features @ classifier                             
                     else:
                         image_features = model.encode_image(images)

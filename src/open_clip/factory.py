@@ -6,11 +6,12 @@ import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional, Tuple
+from collections import OrderedDict
 
 import torch
 from torch import nn
 
-from .model import CLIP, convert_weights_to_fp16, resize_pos_embed
+from .model import CLIP, convert_weights_to_fp16, resize_pos_embed, SIMCLR
 from .openai import load_openai_model
 from .pretrained import get_pretrained_url, download_pretrained
 from .transform import image_transform
@@ -91,6 +92,18 @@ def load_checkpoint(model, checkpoint_path, strict=True):
     incompatible_keys = model.load_state_dict(state_dict, strict=strict)
     return incompatible_keys
 
+#Changed from Sync
+#("bn2", nn.SyncBatchNorm(mlp_dim))
+def build_mlp(in_dim, mlp_dim, out_dim):
+    return nn.Sequential(OrderedDict([
+        ("layer1", nn.Linear(in_dim, mlp_dim)),
+        ("bn1", nn.BatchNorm1d(mlp_dim)),
+        ("relu1", nn.ReLU(inplace=True)),
+        ("layer2", nn.Linear(mlp_dim, mlp_dim)),
+        ("bn2", nn.BatchNorm1d(mlp_dim)),
+        ("relu2", nn.ReLU(inplace=True)),
+        ("layer3", nn.Linear(mlp_dim, out_dim)),
+    ]))
 
 def create_model(
         model_name: str,
@@ -105,6 +118,7 @@ def create_model(
         elp: bool = False,
         vssl: bool = False,
         mlm: bool = False,
+        simclr: bool = False,
         imsize: int = 224
 ):
     if model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
@@ -175,6 +189,23 @@ def create_model(
             convert_weights_to_fp16(model)
         model.to(device=device)
         return model
+    elif simclr:
+        enc = timm.create_model(model_name, num_classes=0).to(device=device)
+        # enc = nn.Sequential(*list(enc.children())[:-1])
+        #TODO: check these settings
+        mlp = build_mlp(in_dim=768, mlp_dim=2048, out_dim=1000).to(device=device)
+        model = SIMCLR(
+            vision_width = 768,
+            vision_model = enc,
+            build_mlp = mlp
+        )
+        if precision == "amp" or precision == "fp32":
+            model = model.float()
+        model.to(device=device)
+        if precision == "fp16":
+            assert device.type != 'cpu'
+            convert_weights_to_fp16(model)
+        return model
     elif model_name == "coca":
         enc = timm.create_model('vit_large_patch16_224', pretrained=True).to(device=device)
         enc = nn.Sequential(*list(enc.children())[:-1])
@@ -187,8 +218,8 @@ def create_model(
             multimodal_depth = 6,          # depth of the multimodal transformer
             dim_head = 64,                 # dimension per attention head
             heads = 8,                     # number of attention heads
-            caption_loss_weight = 1.,      # weight on the autoregressive caption loss
-            contrastive_loss_weight = 1.,  # weight on the contrastive loss between image and text CLS embeddings
+            caption_loss_weight = .25,     # weight on the autoregressive caption loss
+            contrastive_loss_weight = .25,  # weight on the contrastive loss between image and text CLS embeddings
         )
         if precision == "amp" or precision == "fp32":
             model = model.float()
@@ -267,15 +298,16 @@ def create_model_and_transforms(
         elp: bool = False,
         vssl: bool = False,
         mlm: bool = False,
+        simclr: bool = False,
         imsize: int = 224
 ):
     model = create_model(
     model_name, pretrained, precision, device, jit,
     force_quick_gelu=force_quick_gelu,
-    pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize
+    pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize, simclr=simclr
     )
     #FIXME hardcoded size
-    if model_name == "coca":
+    if model_name == "coca" or simclr:
         preprocess_train = image_transform(224, is_train=True)
         preprocess_val = image_transform(224, is_train=False)
     elif model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):

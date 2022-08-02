@@ -15,6 +15,8 @@ try:
 except ImportError:
     hvd = None
 
+from .utils import all_gather_batch_with_grad, GatherLayer
+
 def gather_features(
         image_features,
         text_features,
@@ -133,3 +135,93 @@ class ClipLoss(nn.Module):
             logging.warning("Leaving ClipLoss, NaN loss detected: {}".format(total_loss))
         return total_loss
 
+class SIMCLRLoss(nn.Module):
+    """
+    This is the SimCLR loss in https://arxiv.org/abs/2002.05709
+    As implemented in https://github.com/facebookresearch/SLIP/blob/main/losses.py
+    The embedding vectors are assumed to have size (2 x batch_size, embedding_dim) and
+    the memory layout that can be reshaped into shape (2, batch_size, embedding_dim).
+    This memory layout is consistent with the SimCLR collator in
+    https://github.com/facebookresearch/vissl/blob/master/vissl/data/collators/simclr_collator.py
+    Config params:
+        temperature (float): the temperature to be applied on the logits
+    """
+
+    def __init__(self, temperature=0.1, rank=0, world_size=1):
+        super().__init__()
+        self.tau = temperature
+        self.labels = None
+        self.masks = None
+        self.last_local_batch_size = None
+        self.world_size = world_size
+        self.rank = rank
+
+    def forward(self, outputs):
+        q_a = outputs['aug1_embed']
+        q_b = outputs['aug2_embed']
+
+        q_a = F.normalize(q_a, dim=-1, p=2)
+        q_b = F.normalize(q_b, dim=-1, p=2)
+
+        local_batch_size = q_a.size(0)
+
+        k_a, k_b = all_gather_batch_with_grad([q_a, q_b], self.world_size)
+
+        if local_batch_size != self.last_local_batch_size:
+            self.labels = local_batch_size * self.rank + torch.arange(
+                local_batch_size, device=q_a.device
+            )
+            total_batch_size = local_batch_size * self.world_size
+            self.masks = F.one_hot(self.labels, total_batch_size) * 1e9
+            self.last_local_batch_size = local_batch_size
+
+        logits_aa = torch.matmul(q_a, k_a.transpose(0, 1)) / self.tau
+        logits_aa = logits_aa - self.masks
+        logits_bb = torch.matmul(q_b, k_b.transpose(0, 1)) / self.tau
+        logits_bb = logits_bb - self.masks
+        logits_ab = torch.matmul(q_a, k_b.transpose(0, 1)) / self.tau
+        logits_ba = torch.matmul(q_b, k_a.transpose(0, 1)) / self.tau
+
+        loss_a = F.cross_entropy(torch.cat([logits_ab, logits_aa], dim=1), self.labels)
+        loss_b = F.cross_entropy(torch.cat([logits_ba, logits_bb], dim=1), self.labels)
+        loss = (loss_a + loss_b) / 2  # divide by 2 to average over all samples
+
+        # compute accuracy
+        with torch.no_grad():
+            pred = torch.argmax(torch.cat([logits_ab, logits_aa], dim=1), dim=-1)
+            correct = pred.eq(self.labels).sum()
+            acc = 100 * correct / local_batch_size
+
+        return {'loss': loss, 'ssl_loss': loss, 'ssl_acc': acc}
+    
+class IntLoss(nn.Module):
+    def __init__(self, args, device):
+        super().__init__()
+        self.args = args
+        self.device = device
+        self.last_local_batch_size = None
+
+    def forward(self, logits, labels):
+        local_batch_size = logits.size(0)
+        logits, labels = all_gather_batch_with_grad([logits, labels], self.args.world_size)
+        local_range = local_batch_size * self.args.rank + torch.arange(local_batch_size, device=logits.device)
+        logits = logits[local_range]
+        labels = labels[local_range]
+        loss = 0
+        try:
+            lablen = len(labels[0])
+        except:
+            lablen = 0
+        if lablen > 1:
+            for idx, label in enumerate(labels):
+                if label[1] != -1 and self.args.strict:
+                    continue
+                pred = logits[idx]
+                for tag in label:
+                    if tag == -1:
+                        continue
+                    else:
+                        loss = loss + F.cross_entropy(pred, tag)
+        else:
+            loss = F.cross_entropy(logits, labels)
+        return loss

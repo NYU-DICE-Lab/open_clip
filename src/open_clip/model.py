@@ -601,3 +601,35 @@ def resize_pos_embed(state_dict, model, interpolation: str = 'bicubic', seq_dim=
     else:
         new_pos_embed = pos_emb_img
     state_dict['visual.positional_embedding'] = new_pos_embed
+
+
+# SIMCLR model from https://github.com/facebookresearch/SLIP/blob/main/models.py
+
+class SIMCLR(nn.Module):
+    def __init__(self,
+                 # vision
+                 vision_width: int,
+                 vision_model: nn.Module,
+                 build_mlp: nn.Module,
+                 **kwargs,
+                 ):
+        super().__init__()
+
+        self.vision_width = vision_width
+        self.visual = vision_model
+        self.image_mlp = build_mlp
+
+    def encode_image(self, image):
+        x = self.visual(image)
+
+        return x
+
+    def forward(self, aug1, aug2):
+        h1 = self.visual(aug1)
+        h2 = self.visual(aug2)
+
+        aug1_embed = self.image_mlp(h1)
+        aug2_embed = self.image_mlp(h2)
+
+        return {'aug1_embed': aug1_embed,
+                'aug2_embed': aug2_embed}

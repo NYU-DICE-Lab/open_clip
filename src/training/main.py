@@ -137,12 +137,13 @@ def main():
             elp=args.elp,
             vssl=args.vssl,
             mlm=args.mlm,
+            simclr=args.sim_clr,
             imsize=args.image_size if args.image_size else 224
         )
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):
         args.model = "xclip"
-    args.alt = args.model in ["coca", "xclip"]
+    args.alt = args.model in ["coca", "xclip"] or args.sim_clr
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
@@ -293,6 +294,23 @@ def main():
         evaluate(model, data, start_epoch, args, writer)
         return
 
+    if args.imagenet_tune_freq > 0:
+        exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
+        include = lambda n, p: not exclude(n, p)
+
+        named_parameters = list(model.named_parameters())
+        gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
+        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+
+        args.optimizer_tune = torch.optim.AdamW(
+            [
+                {"params": gain_or_bias_params, "weight_decay": 0.},
+                {"params": rest_params, "weight_decay": args.wd},
+            ],
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
+            eps=args.eps,
+        )
     for epoch in range(start_epoch, args.epochs):
         #reseed every epoch for reproducibility, per https://jamesmccaffrey.wordpress.com/2022/01/03/pytorch-training-checkpoint-exact-recovery-reproducibility/
         random_seed(args.seed, args.rank + epoch)
@@ -300,7 +318,7 @@ def main():
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
+        train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer, args.sim_clr)
         completed_epoch = epoch + 1
 
         if any(v in data for v in eval_datasets):
