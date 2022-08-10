@@ -112,9 +112,9 @@ def run(model, classifier, dataloader, args, idx=None):
                 # predict
                 if args.distributed and not args.horovod:
                     if args.linear_probe:
-                        logits = model(images)
+                        logits = model.module(images)
                     elif args.integer_labels:
-                        logits = model.visual(images)
+                        logits = model.module.visual(images)
                     elif args.model == "coca":
                         texts = torch.randint(100, (5, len(images))).to(args.device)
                         image_features = model.module(texts, images, return_embeddings=True)
@@ -150,6 +150,7 @@ def run(model, classifier, dataloader, args, idx=None):
                         else:
                             image_features = l2norm(model.to_visual_latent(image_features[1][:, 0]))
                         #logging.info("size of image_features {}, size of classifier {}".format(image_features.size(), classifier.size()))
+                        #FILIP: einsum('b t d, b i d -> b t i', *einsum_args)
                         logits = model.temperature.exp() * image_features @ classifier                             
                     else:
                         image_features = model.encode_image(images)

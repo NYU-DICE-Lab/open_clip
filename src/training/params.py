@@ -19,6 +19,12 @@ def parse_args():
         help="Path to csv filewith training data",
     )
     parser.add_argument(
+        "--schema",
+        type=str,
+        default=None,
+        help="Path to training schema with data and epochs",
+    )
+    parser.add_argument(
         "--val-data",
         type=str,
         default=None,
@@ -318,6 +324,12 @@ def parse_args():
         help="Load imagenet pretrained weights for image tower backbone if available.",
     )
     parser.add_argument(
+        "--pretrained-head",
+        default='',
+        type=str,
+        help="Replace the vision tower with a fully trained vision model located at the given path.",
+    )
+    parser.add_argument(
         "--lock-image",
         default=False,
         action='store_true',
@@ -339,6 +351,12 @@ def parse_args():
         default=False,
         action='store_true',
         help="Train on integer labels instead of text captions.",
+    )
+    parser.add_argument(
+        "--img-weight", type=float, default=.5, help="How heavily to weight image embedding"
+    )
+    parser.add_argument(
+        "--text-weight", type=float, default=.5, help="How heavily to weight text embedding"
     )
     parser.add_argument(
         "--multiclass",

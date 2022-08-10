@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import time
+import datetime
 from contextlib import suppress
 from itertools import chain
 import random
@@ -69,6 +70,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         )
     else:
         loss = ClipLoss(
+            img_weight=args.img_weight,
+            text_weight=args.text_weight,
             local_loss=args.local_loss,
             gather_with_grad=args.gather_with_grad,
             cache_labels=True,
@@ -144,23 +147,22 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
     #MAIN TRAINING LOOP
     for i, batch in enumerate(dataloader):
+
         #HOUSEKEEPING
-        if args.ds_filter and args.debug:
-            for b in batch[1].tolist():
-                if b not in batchset:
-                    batchset.append(b)
+        # if args.ds_filter and args.debug:
+        #     for b in batch[1].tolist():
+        #         if b not in batchset:
+        #             batchset.append(b)
 
         #PREP BATCH
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
         images, texts = batch
+        #logging.info(texts)
         texts = texts.to(device=device, non_blocking=True)
         images = images.to(device=device, non_blocking=True)
-        logging.debug("batch length: {}".format(len(images)))
-        if len(images) < 2:
-            logging.debug("skipping short batch")
-            continue
         data_time_m.update(time.time() - end)
+
         if args.dry_run:
             if args.integer_labels:
                 for t in texts:
@@ -180,7 +182,6 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         with autocast():
             if args.integer_labels:
                 total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device, loss)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
             elif args.sim_clr:
                 #"TEXTS" is actually another image file, in the case of SIMCLR                    
                 outputs = unwrap_model(model)(images, texts)
@@ -304,13 +305,13 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                     return
     # end for
     #HOUSEKEEPING
-    if args.ds_filter and args.debug:
-        logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
-    if args.integer_labels:
-        logging.info("In1k strict match count was {}, non_strict was {}".format(in1k_sm_list[0], in1k_nsm_list[0]))
-        if args.wandb:
-            assert wandb is not None, 'Please install wandb.'
-            wandb.log({"in1k_strict_match": in1k_sm_list[0], 'in1k_non_strict_match': in1k_nsm_list[0]})
+    # if args.ds_filter and args.debug:
+    #     logging.debug("The model saw {} unique samples this epoch".format(len(batchset)))
+    # if args.integer_labels:
+    #     logging.info("In1k strict match count was {}, non_strict was {}".format(in1k_sm_list[0], in1k_nsm_list[0]))
+    #     if args.wandb:
+    #         assert wandb is not None, 'Please install wandb.'
+    #         wandb.log({"in1k_strict_match": in1k_sm_list[0], 'in1k_non_strict_match': in1k_nsm_list[0]})
 
 def evaluate(model, data, epoch, args, tb_writer=None):
     metrics = {}

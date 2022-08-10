@@ -1,15 +1,14 @@
 #!/bin/bash -x
 
-#SBATCH --output=yfcc_intlabels_%j.log
+#SBATCH --output=laion15m_coca_%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=128GB
+#SBATCH --mem=256GB
 #SBATCH --gres=gpu:4
-#SBATCH --wait-all-nodes=1
-#SBATCH --job-name=yfcc_intlabels
-#SBATCH --dependency=afterany:22179172
+#SBATCH --dependency=afterany:23162721
+#SBATCH --job-name=laion15m_coca
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 
@@ -30,4 +29,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_mc_3965496.csv" --csv-separator "," --integer-labels --multiclass  --csv-caption-key="in1k_subset_mc" --save-frequency 1 --warmup 2000 --batch-size=128 --precision=fp32 --epochs=64 --workers=8 --model=RN50-in1k  --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-coca-ep3/checkpoints/epoch_3.pt" --save-frequency 1 --warmup 2000 --batch-size=64 --epochs=32 --workers=8 --model=coca --clamp=1e5 --precision=fp32 --local-loss --gather-with-grad'

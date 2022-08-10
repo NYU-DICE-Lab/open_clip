@@ -5,6 +5,8 @@ from datetime import datetime
 
 import numpy as np
 import torch
+import ast
+
 from torch import optim
 from torch.cuda.amp import GradScaler
 
@@ -49,7 +51,7 @@ def main():
     eval_datasets = ['val', 'imagenet-val', 'imagenet-v2', 'inat2021', 'stanfordcars', 'imagenet-s', 'imagenet-r', 'imagenet-a', 'flowers', 'air', 'food']
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace('/', '-')
-
+    os.environ["WDS_VERBOSE_CACHE"] = "1"
     # get the name of the experiments
     if args.name is None:
         args.name = '-'.join([
@@ -63,6 +65,12 @@ def main():
 
     # discover initial world args early so we can log properly
     args.distributed = False
+    #use integer labeling scheme when using simclr training
+    if args.sim_clr:
+        args.integer_labels = True
+    #Freeze text tower when we train on integer labels, check for anomalies with alt models
+    if args.integer_labels:
+        args.lock_text = True
     args.local_rank, args.rank, args.world_size = world_info_from_env()
 
     args.log_path = None
@@ -101,6 +109,7 @@ def main():
         copy_codebase(args)
 
     assert args.precision in ['amp', 'fp16', 'fp32']
+
     if args.precision == 'fp16':
         logging.warning(
             'It is recommended to use AMP mixed-precision instead of FP16. '
@@ -116,7 +125,10 @@ def main():
             f'Process (global: {args.rank}, local {args.local_rank}), total {args.world_size}.')
     else:
         logging.info(f'Running with a single process. Device {args.device}.')
+        args.gather_with_grad = False
+        args.local_loss = False
 
+    assert not (args.pretrained and args.pretrained_head)
     random_seed(args.seed, 0)
     if args.linear_probe:
         model = timm.create_model(args.model, pretrained=True).to(device=device)
@@ -126,7 +138,7 @@ def main():
     else:
         model, preprocess_train, preprocess_val = create_model_and_transforms(
             args.model,
-            args.pretrained,
+            args.pretrained_head if args.pretrained_head else args.pretrained,
             precision=args.precision,
             device=device,
             jit=args.torchscript,
@@ -152,10 +164,6 @@ def main():
         model.lock_image_tower(
             unlocked_groups=args.lock_image_unlocked_groups,
             freeze_bn_stats=args.lock_image_freeze_bn_stats)
-    
-    #Freeze text tower when we train on integer labels, check for anomalies with alt models
-    if args.integer_labels:
-        args.lock_text = True
 
     if args.lock_text and not args.alt:
         # lock text tower as per LiT - https://arxiv.org/abs/2111.07991
@@ -192,7 +200,9 @@ def main():
     # create optimizer and scaler
     optimizer = None
     scaler = None
-    if args.train_data:
+    if args.train_data or args.schema:
+        if args.schema:
+            args.schemas = ast.literal_eval(open(args.schema, 'r').read())
         assert not args.trace, 'Cannot train with traced model'
 
         exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n

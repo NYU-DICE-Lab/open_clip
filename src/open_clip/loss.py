@@ -67,6 +67,8 @@ class ClipLoss(nn.Module):
 
     def __init__(
             self,
+            img_weight=.5,
+            text_weight=.5,
             local_loss=False,
             gather_with_grad=False,
             cache_labels=False,
@@ -75,6 +77,8 @@ class ClipLoss(nn.Module):
             use_horovod=False,
     ):
         super().__init__()
+        self.img_weight = img_weight
+        self.text_weight = text_weight
         self.local_loss = local_loss
         self.gather_with_grad = gather_with_grad
         self.cache_labels = cache_labels
@@ -127,10 +131,7 @@ class ClipLoss(nn.Module):
                 self.prev_num_logits = num_logits
         else:
             labels = self.labels[device]
-        total_loss = (
-            F.cross_entropy(logits_per_image, labels) +
-            F.cross_entropy(logits_per_text, labels)
-            ) / 2
+        total_loss = F.cross_entropy(logits_per_image, labels) * self.img_weight + F.cross_entropy(logits_per_text, labels) * self.text_weight
         if torch.any(torch.isnan(total_loss)):
             logging.warning("Leaving ClipLoss, NaN loss detected: {}".format(total_loss))
         return total_loss
@@ -164,8 +165,13 @@ class SIMCLRLoss(nn.Module):
         q_b = F.normalize(q_b, dim=-1, p=2)
 
         local_batch_size = q_a.size(0)
-
-        k_a, k_b = all_gather_batch_with_grad([q_a, q_b], self.world_size)
+        #TODO: pass in all args
+        if self.world_size > 1:
+            k_a, k_b = gather_features(q_a, q_b, gather_with_grad=True, local_loss=True)
+        else:
+            k_a = q_a
+            k_b = q_b
+        # k_a, k_b = all_gather_batch_with_grad([q_a, q_b], self.world_size)
 
         if local_batch_size != self.last_local_batch_size:
             self.labels = local_batch_size * self.rank + torch.arange(
@@ -202,11 +208,12 @@ class IntLoss(nn.Module):
         self.last_local_batch_size = None
 
     def forward(self, logits, labels):
-        local_batch_size = logits.size(0)
-        logits, labels = all_gather_batch_with_grad([logits, labels], self.args.world_size)
-        local_range = local_batch_size * self.args.rank + torch.arange(local_batch_size, device=logits.device)
-        logits = logits[local_range]
-        labels = labels[local_range]
+        if self.args.world_size > 1:
+            local_batch_size = logits.size(0)
+            logits, labels = gather_features(logits, labels, gather_with_grad=self.args.gather_with_grad, local_loss=self.args.local_loss)
+            local_range = local_batch_size * self.args.rank + torch.arange(local_batch_size, device=logits.device)
+            logits = logits[local_range]
+            labels = labels[local_range]
         loss = 0
         try:
             lablen = len(labels[0])
@@ -216,11 +223,11 @@ class IntLoss(nn.Module):
             for idx, label in enumerate(labels):
                 if label[1] != -1 and self.args.strict:
                     continue
-                pred = logits[idx]
                 for tag in label:
                     if tag == -1:
-                        continue
+                        break
                     else:
+                        pred = logits[idx]
                         loss = loss + F.cross_entropy(pred, tag)
         else:
             loss = F.cross_entropy(logits, labels)

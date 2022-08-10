@@ -218,8 +218,8 @@ def create_model(
             multimodal_depth = 6,          # depth of the multimodal transformer
             dim_head = 64,                 # dimension per attention head
             heads = 8,                     # number of attention heads
-            caption_loss_weight = .25,     # weight on the autoregressive caption loss
-            contrastive_loss_weight = .25,  # weight on the contrastive loss between image and text CLS embeddings
+            caption_loss_weight = .4,      # weight on the autoregressive caption loss
+            contrastive_loss_weight = .6,  # weight on the contrastive loss between image and text CLS embeddings
         )
         if precision == "amp" or precision == "fp32":
             model = model.float()
@@ -270,7 +270,23 @@ def create_model(
 
             if checkpoint_path:
                 logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
-                load_checkpoint(model, checkpoint_path)
+                try:
+                    load_checkpoint(model, checkpoint_path)
+                except:
+                    enc = timm.create_model("vit_base_patch16_224", num_classes=0).to(device=device)
+                    #TODO: check these settings
+                    mlp = build_mlp(in_dim=768, mlp_dim=2048, out_dim=1000).to(device=device)
+                    model.visual = SIMCLR(
+                        vision_width = 768,
+                        vision_model = enc,
+                        build_mlp = mlp
+                    )
+                    checkpoint = torch.load(pretrained, map_location=device)
+                    sd = checkpoint["state_dict"]
+                    if next(iter(sd.items()))[0].startswith('module'):
+                        sd = {k[len('module.'):]: v for k, v in sd.items()}
+                    model.visual.load_state_dict(sd)
+                    model.visual = model.visual.visual
             else:
                 logging.warning(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
                 raise RuntimeError(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
@@ -307,7 +323,7 @@ def create_model_and_transforms(
     pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize, simclr=simclr
     )
     #FIXME hardcoded size
-    if model_name == "coca" or simclr:
+    if model_name == "coca" or simclr or isinstance(model.visual, (SIMCLR, timm.models.vision_transformer.VisionTransformer)):
         preprocess_train = image_transform(224, is_train=True)
         preprocess_val = image_transform(224, is_train=False)
     elif model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
