@@ -149,7 +149,7 @@ def clean_integer_label(label):
             label = label + padding
         elif len(label) > 25:
             label = label[:24]
-        assert(len(label)==25)
+        assert(len(label)==25), "Length of label must be 25"
         return torch.tensor(label)
     else:
         logging.warning("Expected single or multi integer label, got {} -- ignoring")
@@ -444,7 +444,7 @@ def get_dataset_size(shards):
     return total_size, num_shards
 
 def get_imagenet(args, preprocess_fns, split):
-    assert split in ["train", "val", "v2", "r", "a", "s"]
+    assert split in ["train", "val", "v2", "r", "a", "s"], "Not a recognized ImageNet split, {}".format(split)
     is_train = (split == "train")
     preprocess_train, preprocess_val = preprocess_fns
 
@@ -465,7 +465,7 @@ def get_imagenet(args, preprocess_fns, split):
         if split == "s":
             data_path = args.imagenet_s
         preprocess_fn = preprocess_val
-        assert data_path
+        assert data_path, "No data path found"
 
         dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
     if is_train:
@@ -534,7 +534,7 @@ def count_samples(dataloader):
     for images, texts in dataloader:
         n_batches += 1
         n_elements += len(images)
-        assert len(images) == len(texts)
+        assert len(images) == len(texts), "Length of images, texts did not match"
     return n_elements, n_batches
 
 
@@ -564,7 +564,7 @@ def group_by_keys_nothrow(data, keys=base_plus_ext, lcase=True, suffixes=None, h
     """
     current_sample = None
     for filesample in data:
-        assert isinstance(filesample, dict)
+        assert isinstance(filesample, dict), "Filesample is a {}, not a dict".format(type(filesample))
         fname, value = filesample["fname"], filesample["data"]
         prefix, suffix = keys(fname)
         if prefix is None:
@@ -656,7 +656,7 @@ class ResampledShards2(IterableDataset):
         super().__init__()
         urls = wds.shardlists.expand_urls(urls)
         self.urls = urls
-        assert isinstance(self.urls[0], str)
+        assert isinstance(self.urls[0], str), "self.urls[0] is a {}, not a string".format(type(self.urls[0]))
         self.nshards = nshards
         self.rng = random.Random()
         self.worker_seed = pytorch_worker_seed if worker_seed is None else worker_seed
@@ -755,7 +755,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
     else:
         input_shards = args.train_data if is_train else args.val_data
         num_samples, num_shards = get_dataset_size(input_shards)
-    assert input_shards is not None
+    assert input_shards is not None, "No input shards detected"
     resampled = getattr(args, 'dataset_resampled', False) and is_train
     if not num_samples:
         if is_train:
@@ -878,7 +878,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
     collate_fn = intlabel_collate if args.integer_labels else torch.utils.data.dataloader.default_collate
     input_filename = args.train_data if is_train else args.val_data
-    assert input_filename
+    assert input_filename, "No CSV filename found"
     if args.sim_clr:
         dataset = ImageAugCSVDataset(
             input_filename,

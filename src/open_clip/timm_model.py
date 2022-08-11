@@ -40,7 +40,7 @@ class TimmModel(nn.Module):
         feat_size = self.trunk.default_cfg.get('pool_size', None)
         feature_ndim = 1 if not feat_size else 2
         if pool in ('abs_attn', 'rot_attn'):
-            assert feature_ndim == 2
+            assert feature_ndim == 2, "feature_ndim must be 2 for abs_attn pool or rot_attn pool"
             # if attn pooling used, remove both classifier and default pool
             self.trunk.reset_classifier(0, global_pool='')
         else:

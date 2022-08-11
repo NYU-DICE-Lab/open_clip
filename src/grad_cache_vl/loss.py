@@ -11,7 +11,7 @@ class SimpleContrastiveLoss:
 
     def __call__(self, x: Tensor, y: Tensor, target: Tensor = None, reduction: str = 'mean'):
         if target is None:
-            assert x.size(0) * self.target_per_qry == y.size(0)
+            assert x.size(0) * self.target_per_qry == y.size(0), "Size mismatch in gradcache simple contrastive loss, {} {}".format(x.size(0) * self.target_per_qry, y.size(0))
             target = torch.arange(0, x.size(0) * self.target_per_qry, self.target_per_qry, device=x.device)
 
         logits = torch.matmul(x, y.transpose(0, 1))
@@ -55,7 +55,7 @@ class ContrastiveLossWithQueryClosure(SimpleContrastiveLoss):
             return super().__call__(*reps, target=target, reduction=reduction)
 
         # run the closure
-        assert query_closure is not None
+        assert query_closure is not None, "in grad-cache contrastive loss with query closure, query_closure was not set"
         x = query_closure()
         y = reps[0]
         return super().__call__(x, y, target=target, reduction=reduction)

@@ -231,14 +231,21 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                     if args.horovod:
                         optimizer.synchronize()
                         scaler.unscale_(optimizer)
+                        if args.norm_gradient_clip is not None:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.norm_gradient_clip, norm_type=2.0)
                         with optimizer.skip_synchronize():
                             scaler.step(optimizer)
                     else:
+                        if args.norm_gradient_clip is not None:
+                            scaler.unscale_(optimizer)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), args.norm_gradient_clip, norm_type=2.0)
                         scaler.step(optimizer)
                     scaler.update()
             else:
                 if not args.gc:
                     total_loss.backward()
+                    if args.norm_gradient_clip is not None:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.norm_gradient_clip, norm_type=2.0)
                     if not torch.isfinite(total_loss):
                         logging.info("Loss is NaN -- skipping batch {}".format(i))
                         optimizer.zero_grad()

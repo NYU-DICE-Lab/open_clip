@@ -516,7 +516,7 @@ def build_model_from_openai_state_dict(state_dict: dict):
         vision_width = state_dict["visual.layer1.0.conv1.weight"].shape[0]
         output_width = round((state_dict["visual.attnpool.positional_embedding"].shape[0] - 1) ** 0.5)
         vision_patch_size = None
-        assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0]
+        assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0], "Size mismatch building model from openai state dict, {}, {}".format(output_width ** 2 + 1, state_dict["visual.attnpool.positional_embedding"].shape[0])
         image_size = output_width * 32
 
     embed_dim = state_dict["text_projection"].shape[1]

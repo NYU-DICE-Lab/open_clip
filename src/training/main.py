@@ -128,7 +128,7 @@ def main():
         args.gather_with_grad = False
         args.local_loss = False
 
-    assert not (args.pretrained and args.pretrained_head)
+    assert not (args.pretrained and args.pretrained_head), "Cannot pass both pretrained and pretrained-head arguments"
     random_seed(args.seed, 0)
     if args.linear_probe:
         model = timm.create_model(args.model, pretrained=True).to(device=device)

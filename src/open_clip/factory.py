@@ -185,7 +185,7 @@ def create_model(
         if precision == "amp" or precision == "fp32":
             model = model.float()
         if precision == "fp16":
-            assert device.type != 'cpu'
+            assert device.type != 'cpu', "CPU training is not supported for fp16"
             convert_weights_to_fp16(model)
         model.to(device=device)
         return model
@@ -203,7 +203,7 @@ def create_model(
             model = model.float()
         model.to(device=device)
         if precision == "fp16":
-            assert device.type != 'cpu'
+            assert device.type != 'cpu', "CPU training is not supported for fp16"
             convert_weights_to_fp16(model)
         return model
     elif model_name == "coca":
@@ -224,7 +224,7 @@ def create_model(
         if precision == "amp" or precision == "fp32":
             model = model.float()
         if precision == "fp16":
-            assert device.type != 'cpu'
+            assert device.type != 'cpu', "CPU training is not supported for fp16"
             convert_weights_to_fp16(model)
         model.to(device=device)
         return model
@@ -293,7 +293,7 @@ def create_model(
 
         model.to(device=device)
         if precision == "fp16":
-            assert device.type != 'cpu'
+            assert device.type != 'cpu', "CPU training is not supported for fp16"
             convert_weights_to_fp16(model)
 
         if jit:

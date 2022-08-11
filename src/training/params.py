@@ -318,6 +318,9 @@ def parse_args():
         help="Use a pretrained CLIP model weights with the specified tag or file path.",
     )
     parser.add_argument(
+        "--norm_gradient_clip", type=float, default=None, help="Gradient clip."
+    )
+    parser.add_argument(
         "--pretrained-image",
         default=False,
         action='store_true',
