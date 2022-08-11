@@ -4,6 +4,7 @@ Adapted from https://github.com/openai/CLIP. Originally MIT License, Copyright (
 """
 from collections import OrderedDict
 from dataclasses import dataclass
+from typing import Tuple, Union
 import logging
 import math
 from typing import Tuple, Union, Callable, Optional
@@ -16,6 +17,7 @@ from torch.utils.checkpoint import checkpoint
 
 from .timm_model import TimmModel
 from .utils import freeze_batch_norm_2d, to_2tuple
+from .transformer import QuickGELU, VisualTransformer, TextTransformer
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -385,43 +387,35 @@ class CLIP(nn.Module):
                 act_layer=act_layer,
             )
 
-        self.transformer = Transformer(
-            width=text_cfg.width,
-            layers=text_cfg.layers,
-            heads=text_cfg.heads,
-            act_layer=act_layer,
-        )
+        if text_cfg.hf_model_name:
+            self.text = PreTrainedTextEncoder(
+                    text_cfg.hf_model_name,
+                    output_dim=embed_dim,
+                    proj=text_cfg.proj,
+                    pooler_type=text_cfg.pooler_type,
+                )
+        else:
+            self.text = TextTransformer(
+                    context_length=text_cfg.context_length,
+                    vocab_size=text_cfg.vocab_size,
+                    width=text_cfg.width,
+                    heads=text_cfg.heads,
+                    layers=text_cfg.layers,
+                    output_dim=embed_dim,
+                    act_layer=act_layer,
+                )
 
-        self.vocab_size = text_cfg.vocab_size
-        self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
-        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
-        self.ln_final = LayerNorm(text_cfg.width)
-
-        self.text_projection = nn.Parameter(torch.empty(text_cfg.width, embed_dim))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
-        self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
 
         self.init_parameters()
 
-    def init_parameters(self):
-        nn.init.normal_(self.token_embedding.weight, std=0.02)
-        nn.init.normal_(self.positional_embedding, std=0.01)
+    def init_parameters(self, init_image: bool = True, init_text: bool = True):
+        if init_image:
+            if hasattr(self.visual, 'init_parameters'):
+                self.visual.init_parameters()
+        if init_text:
+            self.text.init_parameters()
         nn.init.constant_(self.logit_scale, np.log(1 / 0.07))
-
-        if hasattr(self.visual, 'init_parameters'):
-            self.visual.init_parameters()
-
-        proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
-        attn_std = self.transformer.width ** -0.5
-        fc_std = (2 * self.transformer.width) ** -0.5
-        for block in self.transformer.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -435,45 +429,27 @@ class CLIP(nn.Module):
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
         self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
 
-    def lock_text_tower(self, unlocked_groups=0):
-        self.transformer.lock(unlocked_groups=unlocked_groups)
+    def lock_text_tower(self, unlocked_layers:int=0, freeze_layer_norm:bool=True):
+        self.text.lock(unlocked_layers, freeze_layer_norm)
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
         self.visual.set_grad_checkpointing(enable)
         self.transformer.grad_checkpointing = enable
 
-    def encode_image(self, image):
-        return self.visual(image)
+    def encode_image(self, image, normalize: bool = False):
+        features = self.visual(image)
+        return F.normalize(features, dim=-1) if normalize else features
 
-    def encode_text(self, text):
-        x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
-
-        x = x + self.positional_embedding
-        x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x, attn_mask=self.attn_mask)
-        x = x.permute(1, 0, 2)  # LND -> NLD
-        x = self.ln_final(x)
-
-        # x.shape = [batch_size, n_ctx, transformer.width]
-        # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-
-        return x
+    def encode_text(self, text, normalize: bool = False):
+        features = self.text(text)
+        return F.normalize(features, dim=-1) if normalize else features
 
     def forward(self, image, text):
-        if image is None:
-            return self.encode_text(text)
-        elif text is None:
-            return self.encode_image(image)
-        image_features = self.encode_image(image)
-        image_features = F.normalize(image_features, dim=-1)
-
-        text_features = self.encode_text(text)
-        text_features = F.normalize(text_features, dim=-1)
+        image_features = self.encode_image(image, normalize=True)
+        text_features = self.encode_text(text, normalize=True)
 
         return image_features, text_features, self.logit_scale.exp()
-
 
 def convert_weights_to_fp16(model: nn.Module):
     """Convert applicable model parameters to fp16"""
@@ -498,6 +474,22 @@ def convert_weights_to_fp16(model: nn.Module):
 
     model.apply(_convert_weights_to_fp16)
 
+def convert_state_dict(state_dict: dict):
+    if 'text_projection' in state_dict:
+        # old format state_dict, move text tower -> .text
+        new_state_dict = {}
+        for k, v in state_dict.items():
+            if any(k.startswith(p) for p in (
+                'text_projection',
+                'positional_embedding',
+                'token_embedding',
+                'transformer',
+                'ln_final',
+            )):
+                k = 'text.' + k
+            new_state_dict[k] = v
+        return new_state_dict
+    return state_dict
 
 def build_model_from_openai_state_dict(state_dict: dict):
     vit = "visual.proj" in state_dict

@@ -253,6 +253,15 @@ def parse_args():
         "--batch-size", type=int, default=64, help="Batch size per GPU."
     )
     parser.add_argument(
+        "--val-batch-size", type=int, default=None, help="Batch size for eval only (use batch_size if None)."
+    )
+    parser.add_argument(
+        "--grad-cache-chunk-size",
+        type=int,
+        default=0,
+        help="Enable gradient caching w/ specified chunk size.",
+    )
+    parser.add_argument(
         "--epochs", type=int, default=32, help="Number of epochs to train for."
     )
     parser.add_argument("--lr", type=float, default=None, help="Learning rate.")
@@ -265,10 +274,10 @@ def parse_args():
     )
     parser.add_argument("--clamp", type=float, default=0, help="Gradient clamping.")
     parser.add_argument(
-        "--use-bn-sync",
+        "--sync-bn",
         default=False,
         action="store_true",
-        help="Whether to use batch norm sync.")
+        help="Whether to use synchronized batchnorm.")
     parser.add_argument(
         "--skip-scheduler",
         action="store_true",
@@ -536,6 +545,32 @@ def parse_args():
         type=float, default=.05,
         help="use masked language learning (MLM) on text (DeCLIP)",
     )
+    # args for huggingface models support
+    parser.add_argument(
+        '--hf-model-name', type=str, default=None, help='Pretrained text encoder name from HuggingFace hub'
+    )
+    parser.add_argument(
+        '--hf-tokenizer-name', type=str, default=None, help='Pretrained tokenizer name HuggingFace hub'
+    )
+    parser.add_argument(
+        "--lock-text",
+        default=False,
+        action='store_true',
+        help="Lock full text tower by disabling gradients.",
+    )
+    parser.add_argument(
+        "--lock-text-unlocked-layers",
+        type=int,
+        default=0,
+        help="Leave last n image tower layer groups unlocked.",
+    )
+    parser.add_argument(
+        "--lock-text-freeze-layer-norm",
+        default=False,
+        action='store_true',
+        help="Freeze BatchNorm running stats in image tower for any locked layers.",
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
@@ -543,5 +578,8 @@ def parse_args():
     for name, val in default_params.items():
         if getattr(args, name) is None:
             setattr(args, name, val)
+
+    if getattr(args, 'hf_tokenizer_name') is None:
+        setattr(args, 'hf_tokenizer_name', args.hf_model_name)
 
     return args

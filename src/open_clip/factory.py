@@ -83,6 +83,8 @@ def load_state_dict(checkpoint_path: str, map_location='cpu'):
         state_dict = checkpoint
     if next(iter(state_dict.items()))[0].startswith('module'):
         state_dict = {k[7:]: v for k, v in state_dict.items()}
+    if 'positional_embedding' in state_dict:
+        state_dict = convert_state_dict(state_dict)
     return state_dict
 
 
@@ -272,6 +274,7 @@ def create_model(
                 logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
                 try:
                     load_checkpoint(model, checkpoint_path)
+                    #model.load_state_dict(load_state_dict(checkpoint_path))
                 except:
                     enc = timm.create_model("vit_base_patch16_224", num_classes=0).to(device=device)
                     #TODO: check these settings

@@ -1,4 +1,6 @@
 import os
+from dataclasses import dataclass
+
 import datetime
 import torch
 
@@ -7,6 +9,32 @@ try:
 except ImportError:
     hvd = None
 
+@dataclass
+class DeviceEnv:
+    device: torch.device
+    amp: bool = True
+    dtype: torch.dtype = torch.float32
+    horovod: bool = False
+    sync_bn: bool = False
+    static_graph: bool = False
+    world_size: int = 1
+    rank: int = 0
+    local_rank: int = 0
+
+    @property
+    def distributed(self):
+        return self.world_size > 1
+
+    @property
+    def ddp(self):
+        return self.world_size > 1 and not self.horovod
+
+    @property
+    def cuda(self):
+        return 'cuda' in self.device.type
+
+    def is_master(self, local=False):
+        return self.local_rank == 0 if local else self.rank == 0
 
 def is_global_master(args):
     return args.rank == 0
@@ -113,6 +141,20 @@ def init_distributed_device(args):
     else:
         device = 'cpu'
     args.device = device
-    print(args.device)
     device = torch.device(device)
-    return device
+
+    use_amp = args.precision == 'amp'
+    dtype = torch.float16 if args.precision == 'fp16' else torch.float32
+    device_env = DeviceEnv(
+        device=device,
+        amp=use_amp,
+        dtype=dtype,
+        horovod=args.horovod,
+        sync_bn=args.sync_bn,
+        static_graph=args.ddp_static_graph,
+        world_size=args.world_size,
+        rank=args.rank,
+        local_rank=args.local_rank,
+    )
+
+    return device_env

@@ -9,6 +9,19 @@ import ast
 
 from torch import optim
 from torch.cuda.amp import GradScaler
+import torch.nn.functional as F
+
+from open_clip import create_model_and_transforms, trace_model
+from .data import get_data
+from .device import is_master, init_distributed_device, world_info_from_env
+from .evaluate import evaluate
+from .logger import setup_logging
+from .loss import LossCfg
+from .optim import OptimCfg
+from .params import parse_args
+from .scheduler import cosine_lr
+from .train import train_one_epoch
+from .train_jig import TrainJig
 
 try:
     import wandb
@@ -29,15 +42,6 @@ try:
     import timm
 except ImportError:
     print("Timm was not found")
-
-from open_clip import create_model_and_transforms, trace_model
-from open_clip.transform import image_transform
-from training.data import get_data
-from training.distributed import is_master, init_distributed_device, world_info_from_env
-from training.logger import setup_logging
-from training.params import parse_args
-from training.scheduler import cosine_lr
-from training.train import train_one_epoch, evaluate
 
 
 def random_seed(seed=42, rank=0):
@@ -89,13 +93,33 @@ def main():
     args.log_level = logging.DEBUG if args.debug else logging.INFO
     setup_logging(args.log_path, args.log_level)
 
-    # fully initialize distributed device environment
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cudnn.deterministic = False
-    device = init_distributed_device(args)
+    # fully initialize device + distributed environment
+    assert args.precision in ['amp', 'fp16', 'fp32']
+    if args.precision == 'fp16':
+        logging.warning(
+            'It is recommended to use AMP mixed-precision instead of FP16. '
+            'FP16 support needs further verification and tuning, especially for train.')
+
+    dev_env = init_device(args)
+    if dev_env.cuda:
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.deterministic = False
+
+    if dev_env.horovod:
+        logging.info(
+            f'Running in horovod mode with multiple processes / nodes. Device: {dev_env.device}.'
+            f'Process (global: {dev_env.rank}, local {dev_env.local_rank}), total {dev_env.world_size}.')
+    elif dev_env.distributed:
+        logging.info(
+            f'Running in distributed mode with multiple processes. Device: {dev_env.device}.'
+            f'Process (global: {dev_env.rank}, local {dev_env.local_rank}), total {dev_env.world_size}.')
+    else:
+        logging.info(f'Running with a single process. Device {dev_env.device}.')
+
+    # setup logging services
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
-    if is_master(args):
+    if dev_env.is_master():
         args.tensorboard_path = os.path.join(args.logs, args.name, "tensorboard") if args.tensorboard else ''
         args.checkpoint_path = os.path.join(args.logs, args.name, "checkpoints")
         for dirname in [args.tensorboard_path, args.checkpoint_path]:
@@ -108,28 +132,15 @@ def main():
     if args.copy_codebase:
         copy_codebase(args)
 
-    assert args.precision in ['amp', 'fp16', 'fp32']
-
-    if args.precision == 'fp16':
-        logging.warning(
-            'It is recommended to use AMP mixed-precision instead of FP16. '
-            'FP16 support needs further verification and tuning, especially for train.')
-
-    if args.horovod:
-        logging.info(
-            f'Running in horovod mode with multiple processes / nodes. Device: {args.device}.'
-            f'Process (global: {args.rank}, local {args.local_rank}), total {args.world_size}.')
-    elif args.distributed:
-        logging.info(
-            f'Running in distributed mode with multiple processes. Device: {args.device}.'
-            f'Process (global: {args.rank}, local {args.local_rank}), total {args.world_size}.')
-    else:
+    if dev_env.world_size == 1:
         logging.info(f'Running with a single process. Device {args.device}.')
         args.gather_with_grad = False
         args.local_loss = False
 
     assert not (args.pretrained and args.pretrained_head), "Cannot pass both pretrained and pretrained-head arguments"
+    
     random_seed(args.seed, 0)
+    
     if args.linear_probe:
         model = timm.create_model(args.model, pretrained=True).to(device=device)
         print(dir(model))
@@ -140,7 +151,7 @@ def main():
             args.model,
             args.pretrained_head if args.pretrained_head else args.pretrained,
             precision=args.precision,
-            device=device,
+            device=dev_env.device,
             jit=args.torchscript,
             force_quick_gelu=args.force_quick_gelu,
             pretrained_image=args.pretrained_image,
@@ -156,6 +167,7 @@ def main():
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):
         args.model = "xclip"
     args.alt = args.model in ["coca", "xclip"] or args.sim_clr
+    
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
@@ -166,14 +178,21 @@ def main():
             freeze_bn_stats=args.lock_image_freeze_bn_stats)
 
     if args.lock_text and not args.alt:
-        # lock text tower as per LiT - https://arxiv.org/abs/2111.07991
         model.lock_text_tower(
-            unlocked_groups=args.lock_image_unlocked_groups)
+            unlocked_layers=args.lock_text_unlocked_layers,
+            freeze_layer_norm=args.lock_text_freeze_layer_norm)
 
     if args.grad_checkpointing:
         model.set_grad_checkpointing()
 
-    if is_master(args):
+    if args.grad_cache_chunk_size:
+        assert args.batch_size % args.grad_cache_chunk_size == 0,\
+            'Gradient caching batch size must be divisible by chunk size'
+        if args.val_batch_size is None:
+            # set batch size for evaluation to smaller chunk size if not already set
+            args.val_batch_size = args.grad_cache_chunk_size
+
+    if dev_env.is_master():
         logging.info("Model:")
         logging.info(f"{str(model)}")
         logging.info("Params:")
@@ -183,7 +202,11 @@ def main():
                 val = getattr(args, name)
                 logging.info(f"  {name}: {val}")
                 f.write(f"{name}: {val}\n")
-
+        if args.grad_cache_chunk_size:
+            logging.info(
+                f'Enabling gradient caching with chunk_size: {args.grad_cache_chunk_size}, '
+                f'batch_size: {args.batch_size}, val_batch_size: {args.val_batch_size}.')
+                
     if args.distributed and not args.horovod:
         if args.use_bn_sync:
             model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -325,7 +348,7 @@ def main():
         #reseed every epoch for reproducibility, per https://jamesmccaffrey.wordpress.com/2022/01/03/pytorch-training-checkpoint-exact-recovery-reproducibility/
         random_seed(args.seed, args.rank + epoch)
 
-        if is_master(args):
+        if dev_env.is_master():
             logging.info(f'Start epoch {epoch}')
 
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer, args.sim_clr)

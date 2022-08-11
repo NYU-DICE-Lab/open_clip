@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -90,7 +92,7 @@ class ClipLoss(nn.Module):
         self.prev_num_logits = 0
         self.labels = {}
 
-    def forward(self, image_features, text_features, logit_scale):
+    def forward(self, image_features, text_features, logit_scale: Optional[torch.Tensor] = None):
         device = image_features.device
         if self.world_size > 1:
             all_image_features, all_text_features = gather_features(
@@ -104,10 +106,15 @@ class ClipLoss(nn.Module):
                 logging.warning("found NaN in texts, replacing with a small number")
                 all_text_features = torch.nan_to_num(all_text_features, nan=1e-10)
             if self.local_loss:
-                logits_per_image = logit_scale * image_features @ all_text_features.T
-                logits_per_text = logit_scale * text_features @ all_image_features.T
+                logits_per_image = image_features @ all_text_features.T
+                logits_per_text = text_features @ all_image_features.T
+                if logit_scale is not None:
+                    logits_per_image.mul_(logit_scale)
+                    logits_per_text.mul_(logit_scale)
             else:
-                logits_per_image = logit_scale * all_image_features @ all_text_features.T
+                logits_per_image = all_image_features @ all_text_features.T
+                if logit_scale is not None:
+                    logits_per_image.mul_(logit_scale)
                 logits_per_text = logits_per_image.T
         else:
             #FIXME: band-aid handling of nans

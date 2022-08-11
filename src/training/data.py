@@ -45,6 +45,7 @@ except:
     print("nltk load failed, filtering not available")
 
 from open_clip import tokenize
+from open_clip.tokenizer import HFTokenizer
 
 from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template
 
@@ -156,7 +157,7 @@ def clean_integer_label(label):
         return ""
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t", tokenizer_name=None):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         if dscipher:
@@ -184,6 +185,10 @@ class CsvDataset(Dataset):
         self.images = df[img_key].tolist()
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
+        if tokenizer_name is None:
+            self.tokenize = tokenize
+        else:
+            self.tokenize = HFTokenizer(tokenizer_name)
         self.scrambled = csvscrambled
         self.integer_labels = integer_labels
         logging.debug('Done loading data')
@@ -215,7 +220,7 @@ class CsvDataset(Dataset):
             return images, texts
         if self.scrambled:
             texts = scramble_txt(texts)
-        texts = tokenize(texts)[0]
+        texts = self.tokenize(texts)[0]
         return images, texts
 
 def _convert_to_rgb(image):
@@ -285,13 +290,8 @@ class DataInfo:
 
 
 def preprocess_txt(text):
-    try:
-        text = str(text)
-        return tokenize([text])[0]
-    except Exception as e:
-        logging.info("Exception in preprocess_txt")
-        logging.info(e)
-        return tokenize(["NONE"])[0]
+    text = str(text)
+    return tokenize([text])[0]
 
 def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels):
     try:
@@ -341,6 +341,9 @@ def shift_cipher(s, shift):
       c = c.translate({ord(ch):(ord(ch) - ordshift + shift) % 26 + ordshift for ch in c})
     retstr = retstr + c
   return retstr
+
+def get_text_processor(tokenizer_name:str=None):
+    return preprocess_txt if tokenizer_name is None else HFTokenizer(tokenizer_name, True)
 
 """
 Synset builder
@@ -446,6 +449,9 @@ def get_dataset_size(shards):
 def get_imagenet(args, preprocess_fns, split):
     assert split in ["train", "val", "v2", "r", "a", "s"], "Not a recognized ImageNet split, {}".format(split)
     is_train = (split == "train")
+    batch_size = args.batch_size
+    if not is_train and args.val_batch_size:
+        batch_size = args.val_batch_size
     preprocess_train, preprocess_val = preprocess_fns
 
     if split == "v2":
@@ -744,7 +750,7 @@ def get_wds_dataset_simclr(args, is_train, epoch=0, floor=False, total=None, num
 
     return DataInfo(dataloader=dataloader, shared_epoch=shared_epoch)
 
-def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=None):
+def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=None, tokenizer_name=None):
     if args.schema:
         input_shards = []
         num_samples = 0
@@ -813,18 +819,22 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
     #     pipeline.extend([
     #         wds.map_dict(image=total, handler=log_and_continue)
     #     ])
+
+    #dataset filtering for captions
     if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
         pipeline.extend([
             wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels), handler=log_and_continue),
             wds.select(filter_no_caption_text),
         ])
+
+    #If we use integer labels, we do not tokenize    
     if args.integer_labels:
         pipeline.extend([
             wds.map_dict(image=preprocess_img, handler=log_and_continue),
         ])
     else:
         pipeline.extend([
-            wds.map_dict(image=preprocess_img, text=preprocess_txt, handler=log_and_continue),
+            wds.map_dict(image=preprocess_img, text=get_text_processor(tokenizer_name)),
         ])
     pipeline.extend([
         wds.to_tuple("image", "text"),
@@ -908,7 +918,8 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             strict=args.strict,
             shift=args.shift_cipher,
             integer_labels=args.integer_labels,
-            sep=args.csv_separator)
+            sep=args.csv_separator,
+            tokenizer_name=tokenizer_name)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
     shuffle = is_train and sampler is None
@@ -962,14 +973,14 @@ def get_data(args, preprocess_fns, epoch=0):
     
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
-            args, preprocess_train, is_train=True, epoch=epoch, total=total)
+            args, preprocess_train, is_train=True, epoch=epoch, total=total, tokenizer_name=args.hf_tokenizer_name)
     elif args.schema:
         data["train"] = get_dataset_fn(args.schema, "webdataset")(
-            args, preprocess_train, is_train=True, epoch=epoch, total=total) 
+            args, preprocess_train, is_train=True, epoch=epoch, total=total, tokenizer_name=args.hf_tokenizer_name) 
            
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
-            args, preprocess_val, is_train=False, total=None)
+            args, preprocess_val, is_train=False, epoch=epoch, total=None, tokenizer_name=args.hf_tokenizer_name)
     
     if args.imagenet_train is not None:
         data["imagenet-train"] = get_imagenet(args, preprocess_fns, "train")
