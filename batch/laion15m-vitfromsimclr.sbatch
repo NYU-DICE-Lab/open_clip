@@ -1,13 +1,13 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion15m-vit-simclr-%j.log
+#SBATCH --output=laion15m-vit-fromsimclr-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
 #SBATCH --mem=256GB
 #SBATCH --gres=gpu:mi50:8
-#SBATCH --job-name=laion15m-vit-simclr
+#SBATCH --job-name=laion15m-vit-fromsimclr
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 
@@ -15,6 +15,11 @@ module purge;
 
 #debug flags
 echo $SLURM_JOB_NAME
+export NCCL_BLOCKING_WAIT=1; 
+export NCCL_DEBUG=INFO; 
+export TORCH_CPP_LOG_LEVEL=INFO; 
+export TORCH_DISTRIBUTED_DEBUG=INFO; 
+export PYTHONFAULTHANDLER=1;
 
 #env vars
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK

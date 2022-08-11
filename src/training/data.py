@@ -141,14 +141,14 @@ def clean_integer_label(label):
         except Exception as e:
             print("Error converting string to integer list, {}".format(e))
             return ""
-        if len(label) < 1:
+        if label == []:
             print("No integers found in this label. Returning false.")
             return ""
-        elif len(label) > 25:
-            label = label[:24]
-        elif len(label) < 25:
+        if 1 <= len(label) < 25:
             padding = [-1 for i in range(25 - len(label))]
             label = label + padding
+        elif len(label) > 25:
+            label = label[:24]
         assert(len(label)==25)
         return torch.tensor(label)
     else:
@@ -423,6 +423,7 @@ def clean_captions(x):
         return ""
 
 def get_dataset_size(shards):
+    shards_list = list(braceexpand.braceexpand(shards))
     dir_path = os.path.dirname(shards)
     sizes_filename = os.path.join(dir_path, 'sizes.json')
     len_filename = os.path.join(dir_path, '__len__')
@@ -948,6 +949,7 @@ def get_data(args, preprocess_fns, epoch=0):
     preprocess_train, preprocess_val = preprocess_fns
     data = {}
     total = TotalSize()
+
     if args.ds_cipher:
         args.ds_filter = get_imagenet_cipher()
     elif args.ds_filter != "":
@@ -957,12 +959,14 @@ def get_data(args, preprocess_fns, epoch=0):
             var_names = globals()
             args.ds_filter = var_names[args.ds_filter]
             args.ds_filter = [clean_captions(a) for a in args.ds_filter]
-    elif args.train_data:
+    
+    if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch, total=total)
     elif args.schema:
         data["train"] = get_dataset_fn(args.schema, "webdataset")(
-            args, preprocess_train, is_train=True, epoch=epoch, total=total)        
+            args, preprocess_train, is_train=True, epoch=epoch, total=total) 
+           
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
             args, preprocess_val, is_train=False, total=None)

@@ -1,13 +1,13 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion15m-vit-simclr-%j.log
+#SBATCH --output=laion15m-vit-fromsimclr-intlabels-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
 #SBATCH --mem=256GB
 #SBATCH --gres=gpu:mi50:8
-#SBATCH --job-name=laion15m-vit-simclr
+#SBATCH --job-name=laion15m-vit-fromsimclr-intlabels
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

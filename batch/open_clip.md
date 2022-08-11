@@ -400,3 +400,8 @@ elif imagenet-tune-freq > 0 and epoch % imagenet-tune-freq != 0:
     args.train_integer_labels = False
     data = data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
     dataloader = data['train'].dataloader
+
+
+####
+
+python src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{20000..30000}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --strict=True --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=RN50-in1k --resume "/scratch/bf996/open_clip/logs/laion100m-15mtrain-in1k-filter-RN50-ep4-20/checkpoints/epoch_19.pt"
