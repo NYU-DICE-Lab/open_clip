@@ -10,13 +10,9 @@ from tqdm import tqdm
 import numpy as np
 
 from open_clip import tokenize
-<<<<<<< HEAD
-=======
-from .utils import unwrap_model
-from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template
->>>>>>> text-transformer
 
 from .data import shift_cipher
+from .utils import unwrap_model
 
 from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx
 
@@ -34,11 +30,7 @@ def l2norm(t):
     return F.normalize(t, dim = -1, p = 2)
 
 def zero_shot_classifier(model, classnames, templates, args):
-<<<<<<< HEAD
     logging.debug("In zero-shot-classifer, classnames are {}".format(classnames))
-=======
-    model = unwrap_model(model)
->>>>>>> text-transformer
     with torch.no_grad():
         zeroshot_weights = []
         for classname in tqdm(classnames):
@@ -50,7 +42,6 @@ def zero_shot_classifier(model, classnames, templates, args):
                     random.shuffle(l)
                     res.append(" ".join(l).strip())
             texts = tokenize(texts).to(args.device)  # tokenize
-<<<<<<< HEAD
             logging.debug("In zero-shot-classifer, tokens are {}".format(classnames))
             if args.distributed and not args.horovod:
                 if args.model in ["coca"]:
@@ -68,8 +59,8 @@ def zero_shot_classifier(model, classnames, templates, args):
                     else:
                         class_embedding = l2norm(model.module.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)          
                 else:
-                    class_embeddings = model.module.encode_text(texts)
-                    class_embedding = F.normalize(class_embeddings, dim=-1).mean(dim=0)
+                    class_embeddings = model.module.encode_text(texts, normalize=True)
+                    class_embedding = class_embeddings.mean(dim=0)
                     class_embedding /= class_embedding.norm()
             else:         
                 if args.model in ["coca"]:
@@ -87,14 +78,9 @@ def zero_shot_classifier(model, classnames, templates, args):
                     else:
                         class_embedding = l2norm(model.to_text_latent(class_embeddings[0][:, 0])).mean(dim=0)
                 else:
-                    class_embeddings = model.encode_text(texts)
-                    class_embedding = F.normalize(class_embeddings, dim=-1).mean(dim=0)
+                    class_embeddings = model.encode_text(texts, normalize=True)
+                    class_embedding = class_embeddings.mean(dim=0)
                     class_embedding /= class_embedding.norm()
-=======
-            class_embeddings = model.encode_text(texts, normalize=True)
-            class_embedding = class_embeddings.mean(dim=0)
-            class_embedding /= class_embedding.norm()
->>>>>>> text-transformer
             zeroshot_weights.append(class_embedding)
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).to(args.device)
     return zeroshot_weights
@@ -108,7 +94,6 @@ def accuracy(output, target, topk=(1,)):
 
 def run(model, classifier, dataloader, args, idx=None):
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
-    model = unwrap_model(model)
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
@@ -126,7 +111,6 @@ def run(model, classifier, dataloader, args, idx=None):
                 target = target[:min(args.gpumaxbatch, len(images)-1)]
             with autocast():
                 # predict
-<<<<<<< HEAD
                 if args.distributed and not args.horovod:
                     if args.linear_probe:
                         logits = model.module(images)
@@ -146,8 +130,7 @@ def run(model, classifier, dataloader, args, idx=None):
                             image_features = l2norm(model.module.to_visual_latent(image_features[1][:, 0]))
                         logits = model.module.temperature.exp() * image_features @ classifier
                     else:
-                        image_features = model.module.encode_image(images)
-                        image_features = F.normalize(image_features, dim=-1)
+                        image_features = model.module.encode_image(images, normalize=True)
                         logits = 100. * image_features @ classifier
                 else:
                     if args.linear_probe:
@@ -170,14 +153,8 @@ def run(model, classifier, dataloader, args, idx=None):
                         #FILIP: einsum('b t d, b i d -> b t i', *einsum_args)
                         logits = model.temperature.exp() * image_features @ classifier                             
                     else:
-                        image_features = model.encode_image(images)
-                        image_features = F.normalize(image_features, dim=-1)
+                        image_features = model.encode_image(images, normalize=True)
                         logits = 100. * image_features @ classifier
-=======
-                image_features = model.encode_image(images, normalize=True)
-                logits = 100. * image_features @ classifier
-
->>>>>>> text-transformer
             # measure accuracy
             # logging.debug("size of logits: {}, size of target: {}".format(logits.size(), target.size()))
             # print(logits.size(), target.size())
