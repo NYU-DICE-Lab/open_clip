@@ -57,16 +57,15 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     model.train()
     #TODO: implement temperature for SIMCLR
-    if args.integer_labels:
+    if sim_clr:
+        loss = SIMCLRLoss(
+            0.1,
+            args
+        )
+    elif args.integer_labels:
         loss = IntLoss(
             args,
             device
-        )
-    elif sim_clr:
-        loss = SIMCLRLoss(
-            temperature=0.1,
-            rank=args.rank,
-            world_size=args.world_size
         )
     else:
         loss = ClipLoss(
@@ -180,9 +179,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
         # LOSS
         with autocast():
-            if args.integer_labels:
-                total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device, loss)
-            elif args.sim_clr:
+            if args.sim_clr:
                 #"TEXTS" is actually another image file, in the case of SIMCLR                    
                 outputs = unwrap_model(model)(images, texts)
                 total_loss = loss(outputs)
@@ -191,6 +188,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 if i % 100 == 0:
                     logging.info("SSL ACC: {}".format(acc))
                 total_loss = total_loss['loss']
+            elif args.integer_labels:
+                total_loss = train_integer_labels(unwrap_model(model).visual, images, texts, device, loss)
             elif args.gc:
                 if args.alt:
                     raise("gradient caching not supported yet for this model, sorry!")

@@ -315,6 +315,7 @@ def create_model_and_transforms(
         vssl: bool = False,
         mlm: bool = False,
         simclr: bool = False,
+        simclr_trans: bool = False,
         imsize: int = 224
 ):
     model = create_model(
@@ -324,14 +325,14 @@ def create_model_and_transforms(
     )
     #FIXME hardcoded size
     if model_name == "coca" or simclr or isinstance(model.visual, (SIMCLR, timm.models.vision_transformer.VisionTransformer)):
-        preprocess_train = image_transform(224, is_train=True)
-        preprocess_val = image_transform(224, is_train=False)
+        preprocess_train = image_transform(224, is_train=True, simclr_trans=simclr_trans)
+        preprocess_val = image_transform(224, is_train=False, simclr_trans=simclr_trans)
     elif model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
-        preprocess_train = image_transform(model.image_size, is_train=True)
-        preprocess_val = image_transform(model.image_size, is_train=False)
+        preprocess_train = image_transform(model.image_size, is_train=True, simclr_trans=simclr_trans)
+        preprocess_val = image_transform(model.image_size, is_train=False, simclr_trans=simclr_trans)
     else:
-        preprocess_train = image_transform(model.visual.image_size, is_train=True)
-        preprocess_val = image_transform(model.visual.image_size, is_train=False)
+        preprocess_train = image_transform(model.visual.image_size, is_train=True, simclr_trans=simclr_trans)
+        preprocess_val = image_transform(model.visual.image_size, is_train=False, simclr_trans=simclr_trans)
     return model, preprocess_train, preprocess_val
 
 def list_models():

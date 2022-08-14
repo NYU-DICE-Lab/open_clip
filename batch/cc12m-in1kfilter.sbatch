@@ -1,0 +1,32 @@
+#!/bin/bash -x
+
+#SBATCH --output=cc12m_subset_%j.log
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=8
+#SBATCH --time=47:59:00
+#SBATCH --mem=128GB
+#SBATCH --gres=gpu:4
+#SBATCH --dependency=afterany:23389307
+#SBATCH --job-name=cc12m_subset_training
+#SBATCH --mail-type=BEGIN,END
+#SBATCH --mail-user=bf996@nyu.edu
+
+module purge;
+
+#debug flags
+echo $SLURM_JOB_NAME
+
+#env vars
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
+export WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
+echo "WORLD_SIZE="$WORLD_SIZE
+export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"
+echo "MASTER_ADDR="$MASTER_ADDR
+
+#run command
+srun --cpu_bind=v --accel-bind=v \
+    /bin/bash src/script/run-singularity.bash \
+    /bin/bash -c \
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --resume "/scratch/bf996/open_clip/logs/2022_08_10-07_30_13-model_RN50-lr_0.0005-b_128-j_8-p_fp32/checkpoints/epoch_14.pt" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --precision=fp32 --norm_gradient_clip=1e5 --model=RN50 --local-loss --gather-with-grad'

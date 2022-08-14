@@ -150,6 +150,7 @@ def main():
             vssl=args.vssl,
             mlm=args.mlm,
             simclr=args.sim_clr,
+            simclr_trans=args.sim_clr_trans,
             imsize=args.image_size if args.image_size else 224
         )
 

@@ -139,24 +139,25 @@ def clean_integer_label(label):
         try:
             label = [int(l) for l in label]
         except Exception as e:
-            print("Error converting string to integer list, {}".format(e))
+            logging.warning("Error converting string to integer list, {}".format(e))
             return ""
         if label == []:
-            print("No integers found in this label. Returning false.")
+            logging.warning("No integers found in {}. Returning false.".format(label))
             return ""
         if 1 <= len(label) < 25:
             padding = [-1 for i in range(25 - len(label))]
             label = label + padding
         elif len(label) > 25:
             label = label[:24]
-        assert(len(label)==25), "Length of label must be 25"
+        if len(label) != 25:
+            logging.warning("Integer label {} has length {}".format(label, len(label)))
         return torch.tensor(label)
     else:
         logging.warning("Expected single or multi integer label, got {} -- ignoring")
         return ""
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         if dscipher:
@@ -169,14 +170,14 @@ class CsvDataset(Dataset):
             logging.debug(df.head())
         if dscipher or simplecaptions or shift:
             logging.debug('Transforming or encoding captions. Original dataset size is {}'.format(len(df)))
-            df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict, shift=shift)
+            df['title'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=dscipher, simplecaptions=simplecaptions, strict=strict, shift=shift, metacaptions=metacaptions)
             logging.debug(df['title'].head())
             df = df[df['title'].str.len() > 0]
             logging.debug("Done. Length is now {}".format(len(df)))
             logging.debug(df.head())            
         elif csvfilter != "":
             logging.debug('Filtering captions. Original dataset size is {}'.format(len(df)))
-            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=False, simplecaptions=False, strict=strict, shift=shift)
+            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter, cipher=False, simplecaptions=False, strict=strict, shift=shift, metacaptions=metacaptions)
             logging.debug(df['is_synset'].head())
             df = df[df['is_synset']].drop(columns=['is_synset'])
             logging.debug("Done. Length is now {}".format(len(df)))
@@ -222,7 +223,7 @@ def _convert_to_rgb(image):
     return image.convert('RGB')
     
 class ImageAugCSVDataset(CsvDataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
         super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep)
         self.augment = torchvision.transforms.Compose([
             torchvision.transforms.RandomResizedCrop(224, scale=(0.08, 1.)),
@@ -293,32 +294,27 @@ def preprocess_txt(text):
         logging.info(e)
         return tokenize(["NONE"])[0]
 
-def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels):
-    try:
-        if bool(ds):
-            if integer_labels:
-                text = clean_captions(str(text))
-                text = synset_ds(text, 3, ds, False, False, strict, False, integer_labels)
-                if text:
-                    text = clean_integer_label(text)
-                else:
-                    text = ""
-            else:
-                text = clean_captions(str(text))
-                if not synset_ds(text, 3, ds, False, False, strict, shift, integer_labels):
-                    text = ""
-        elif any([dscipher, simplecaptions, strict, shift]):
+def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions):
+    if bool(ds):
+        if integer_labels:
             text = clean_captions(str(text))
-            text = synset_ds(text, 3, ds, dscipher, simplecaptions, strict, shift, integer_labels)
-            if not text:
+            text = synset_ds(text, 3, ds, False, False, strict, False, integer_labels, metacaptions)
+            if text:
+                text = clean_integer_label(text)
+            else:
                 text = ""
-        if scrambled:
-            text = scramble_txt(text)
-        return text
-    except Exception as e:
-        logging.info("Exception in filter preprocess: ")
-        logging.info(e)
-        return ""
+        else:
+            text = clean_captions(str(text))
+            if not synset_ds(text, 3, ds, False, False, strict, shift, integer_labels, metacaptions):
+                text = ""
+    elif any([dscipher, simplecaptions, strict, shift]):
+        text = clean_captions(str(text))
+        text = synset_ds(text, 3, ds, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions)
+        if not text:
+            text = ""
+    if scrambled:
+        text = scramble_txt(text)
+    return text
 
 def scramble_txt(text):
     tlist = text.split(" ")
@@ -351,32 +347,40 @@ nva uses parts of speech for all of wordnet, instead of matching on some list fr
 WARNING: can return string or bool, depending on arguments provided
 """
 
-def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None, integer_labels=False):
-    try:
+def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None, integer_labels=False, metacaptions=None):
+    #try:
         flag = False
         s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
         if len(s) > 77:
             s = s[:76]
         str_s = " ".join(w for w in s)
+
         for count, word in enumerate(s):
+
             if strict and flag:
                 break
             grams = []
+
             for i in range(ngram):
                 if count + i - 1 > len(s):
                     continue
                 gram = " ".join(w for w in s[count:count+i+1] if len(w) > 2)
                 grams.append(gram)
+
             for i, gram in enumerate(grams):
+
                 if strict and flag:
                     break
+
                 gram_t = gram
+
                 if cipher:
                     k = ""
                     for c in gram:
                         nextc = cipher_dict.get(c) or c
                         k = k + nextc
                     gram_t = k
+
                 if ds and gram_t in ds:
                     if integer_labels and not flag:
                         str_s = "{}".format(ds.index(gram_t))
@@ -385,6 +389,18 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                         if str_s.find(str(idx_insert)) == -1:
                             str_s += ", {}".format(idx_insert)
                         continue
+                    elif not metacaptions.empty:
+                        idx_insert = ds.index(gram_t)
+                        row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
+                        if not row.empty:
+                            row = row.iloc[0]
+                            for field in [row['functional_classname'], row['subclass'], row['relations_locations'], row['relations_objects'], row['relations_events']]:
+                                if field == "":
+                                    continue
+                                items = field.split(", ")
+                                for item in items:
+                                    if str_s.find(item) == -1:
+                                        str_s = str_s + " " + item
                     if simplecaptions and not flag:
                         str_s = "An image of " + gram_t
                     elif simplecaptions and flag and str_s.find(gram) == -1:
@@ -392,6 +408,7 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                     flag = True
                     if cipher:
                         str_s = str_s.replace(gram, k)
+
                 elif simplecaptions and not ds:
                     d = wordnet.synsets(gram)
                     if d in stopwords.words('english'):
@@ -400,19 +417,24 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                         str_s = "An image of " + gram
                     elif d and str_s.find(gram) == -1:
                         str_s += " {}".format(gram)
+                        
                     flag=True
+
         if cipher or simplecaptions or integer_labels:
             if not flag:
                 str_s = ""
             return str_s
+
         elif shift:
             str_s = shift_cipher(str_s, shift)
             return str_s
+
         return flag
-    except Exception as e:
-        logging.info("Exception in synset ds: ")
-        logging.info(e)
-        return ""
+        
+    # except Exception as e:
+    #     logging.info("Exception in synset ds: ")
+    #     logging.info(e)
+    #     return ""
 
 def clean_captions(x):
     try:
@@ -815,7 +837,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
     #     ])
     if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
         pipeline.extend([
-            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels), handler=log_and_continue),
+            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.metacaptions), handler=log_and_continue),
             wds.select(filter_no_caption_text),
         ])
     if args.integer_labels:
@@ -893,6 +915,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             strict=args.strict,
             shift=args.shift_cipher,
             integer_labels=args.integer_labels,
+            metacaptions=args.metacaptions,
             sep=args.csv_separator)
     else:
         dataset = CsvDataset(
@@ -908,6 +931,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             strict=args.strict,
             shift=args.shift_cipher,
             integer_labels=args.integer_labels,
+            metacaptions=args.metacaptions,
             sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
@@ -959,7 +983,13 @@ def get_data(args, preprocess_fns, epoch=0):
             var_names = globals()
             args.ds_filter = var_names[args.ds_filter]
             args.ds_filter = [clean_captions(a) for a in args.ds_filter]
-    
+
+        if args.metacaptions:
+            args.metacaptions = pd.read_csv(args.metacaptions)
+            args.metacaptions.fillna('', inplace=True)
+        else:
+            args.metacaptions = pd.DataFrame()
+
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch, total=total)

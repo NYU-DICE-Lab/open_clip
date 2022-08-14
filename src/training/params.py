@@ -333,6 +333,12 @@ def parse_args():
         help="Replace the vision tower with a fully trained vision model located at the given path.",
     )
     parser.add_argument(
+        "--metacaptions",
+        default='',
+        type=str,
+        help="Path to metadata csv for captioning.",
+    )
+    parser.add_argument(
         "--lock-image",
         default=False,
         action='store_true',
@@ -348,6 +354,11 @@ def parse_args():
         "--sim-clr",
         default=False,
         help="Use simclr loss",
+    )
+    parser.add_argument(
+        "--sim-clr-trans",
+        default=False,
+        help="Use simclr image transforms",
     )
     parser.add_argument(
         "--integer-labels",

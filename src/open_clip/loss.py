@@ -62,7 +62,6 @@ def gather_features(
             all_text_features = torch.cat(gathered_text_features, dim=0)
     return all_image_features, all_text_features
 
-
 class ClipLoss(nn.Module):
 
     def __init__(
@@ -148,14 +147,13 @@ class SIMCLRLoss(nn.Module):
         temperature (float): the temperature to be applied on the logits
     """
 
-    def __init__(self, temperature=0.1, rank=0, world_size=1):
+    def __init__(self, temperature=0.1, args=None):
         super().__init__()
         self.tau = temperature
         self.labels = None
         self.masks = None
         self.last_local_batch_size = None
-        self.world_size = world_size
-        self.rank = rank
+        self.args = args
 
     def forward(self, outputs):
         q_a = outputs['aug1_embed']
@@ -165,19 +163,20 @@ class SIMCLRLoss(nn.Module):
         q_b = F.normalize(q_b, dim=-1, p=2)
 
         local_batch_size = q_a.size(0)
-        #TODO: pass in all args
-        if self.world_size > 1:
-            k_a, k_b = gather_features(q_a, q_b, gather_with_grad=True, local_loss=True)
+        if self.args.world_size > 1:
+            k_a, k_b = gather_features(
+                q_a, q_b,
+                self.args.local_loss, self.args.gather_with_grad, self.args.rank, self.args.world_size)
         else:
             k_a = q_a
             k_b = q_b
         # k_a, k_b = all_gather_batch_with_grad([q_a, q_b], self.world_size)
 
         if local_batch_size != self.last_local_batch_size:
-            self.labels = local_batch_size * self.rank + torch.arange(
+            self.labels = local_batch_size * self.args.rank + torch.arange(
                 local_batch_size, device=q_a.device
             )
-            total_batch_size = local_batch_size * self.world_size
+            total_batch_size = local_batch_size * self.args.world_size
             self.masks = F.one_hot(self.labels, total_batch_size) * 1e9
             self.last_local_batch_size = local_batch_size
 
@@ -210,8 +209,10 @@ class IntLoss(nn.Module):
     def forward(self, logits, labels):
         if self.args.world_size > 1:
             local_batch_size = logits.size(0)
-            logits, labels = gather_features(logits, labels, gather_with_grad=self.args.gather_with_grad, local_loss=self.args.local_loss)
-            local_range = local_batch_size * self.args.rank + torch.arange(local_batch_size, device=logits.device)
+            logits, labels = gather_features(
+                logits, labels,
+                self.args.local_loss, self.args.gather_with_grad, self.args.rank, self.args.world_size)
+            local_range = local_batch_size * self.args.rank + torch.arange(local_batch_size, device=self.device)
             logits = logits[local_range]
             labels = labels[local_range]
         loss = 0

@@ -3,7 +3,7 @@ from typing import Optional, Sequence, Tuple
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
-
+import torchvision
 
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
     CenterCrop
@@ -42,6 +42,7 @@ def _convert_to_rgb(image):
 def image_transform(
         image_size: int,
         is_train: bool,
+        simclr_trans: bool,
         mean: Optional[Tuple[float, ...]] = None,
         std: Optional[Tuple[float, ...]] = None,
         resize_longest_max: bool = False,
@@ -54,7 +55,20 @@ def image_transform(
         image_size = image_size[0]
 
     normalize = Normalize(mean=mean, std=std)
-    if is_train:
+    if simclr_trans:
+        return Compose([
+                torchvision.transforms.RandomResizedCrop(image_size, scale=(0.08, 1.)),
+                torchvision.transforms.RandomApply([
+                    torchvision.transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+                ], p=0.8),
+                torchvision.transforms.RandomGrayscale(p=0.2),
+                torchvision.transforms.RandomApply([torchvision.transforms.GaussianBlur(5, sigma=(.1, 2.))], p=0.5),
+                torchvision.transforms.RandomHorizontalFlip(),
+                _convert_to_rgb,
+                torchvision.transforms.ToTensor(),
+                normalize,
+        ])
+    elif is_train:
         return Compose([
             RandomResizedCrop(image_size, scale=(0.9, 1.0), interpolation=InterpolationMode.BICUBIC),
             _convert_to_rgb,

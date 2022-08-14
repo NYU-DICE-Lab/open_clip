@@ -5,9 +5,9 @@
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=128GB
+#SBATCH --mem=192GB
 #SBATCH --gres=gpu:4
-#SBATCH --wait-all-nodes=1
+#SBATCH --dependency=afterany:23441958
 #SBATCH --job-name=l15mcc12m
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
@@ -27,4 +27,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --schema="/scratch/bf996/open_clip/schema/cc12m-l15m-32.txt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=RN50 --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --schema="/scratch/bf996/open_clip/schema/cc12m-l15m-32.txt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=RN50 --resume "/scratch/bf996/open_clip/logs/2022_08_10-12_39_42-model_RN50-lr_0.0005-b_256-j_8-p_amp/checkpoints/epoch_7.pt" --local-loss --gather-with-grad'

@@ -25,8 +25,6 @@ singularity exec --nv \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
   /bin/bash
-
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
 ```
 
 ```bash
@@ -49,8 +47,6 @@ singularity exec \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
   /bin/bash
-
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin"; unset SLURM_NTASKS;
 ```
 
 ### ROCM
@@ -67,14 +63,29 @@ singularity \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   /scratch/work/public/singularity/rocm5.2.0-ubuntu20.04.4.sif \
   /bin/bash
+```
 
+### GPU FLAGS
+
+```bash
+#NO GPU
+source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin"; unset SLURM_NTASKS;
+
+#ONE GPU
+source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
+
+#MULTI-GPU
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
 ```
 
 ### DEBUG
 
 ```bash
-export NCCL_P2P_LEVEL=NVL; export NCCL_BLOCKING_WAIT=1; export NCCL_DEBUG=INFO; export TORCH_CPP_LOG_LEVEL=INFO; export TORCH_DISTRIBUTED_DEBUG=INFO; export HCC_SERIALIZE_KERNEL=0x3; export HCC_SERIALIZE_COPY=0x3; export HIP_TRACE_API=0x2; export MIOPEN_ENABLE_LOGGING_CMD=1; export TORCH_SHOW_CPP_STACKTRACES=1; export NCCL_DEBUG_SUBSYS=ALL; export PYTHONFAULTHANDLER=1;
+#TORCH
+export NCCL_P2P_LEVEL=NVL; export NCCL_BLOCKING_WAIT=1; export NCCL_DEBUG=INFO; export TORCH_CPP_LOG_LEVEL=INFO; export TORCH_DISTRIBUTED_DEBUG=INFO; export TORCH_SHOW_CPP_STACKTRACES=1; export NCCL_DEBUG_SUBSYS=ALL; export PYTHONFAULTHANDLER=1;
+
+#ROCM
+export HCC_SERIALIZE_KERNEL=0x3; export HCC_SERIALIZE_COPY=0x3; export HIP_TRACE_API=0x2; export MIOPEN_ENABLE_LOGGING_CMD=1;
 ```
 
 ### Commands
@@ -230,6 +241,8 @@ python src/training/main.py --batch-size=32 --workers=4 --inat2021="/scratch/bf9
 
 python -u /scratch/bf996/open_clip/src/training/main.py --stanfordcars "/scratch/bf996/datasets/stanfordcars" --flowers "/scratch/bf996/datasets/flowers102" --zeroshot-frequency=1 --workers=16 --model=RN50 --pretrained=yfcc15m
 
+python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --precision=fp32 --norm_gradient_clip=1e5 --model=RN50
+
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-scramble=True --zeroshot-frequency=1 --workers=16 --model=RN50 --pretrained=openai
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --zs-upper=True --model=ViT-B-32 --pretrained=laion400m_e32
@@ -338,7 +351,11 @@ python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work
 
 torchrun --nproc_per_node=2 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_single_3965496.csv" --csv-separator "," --integer-labels  --csv-caption-key="in1k_subset" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=RN50-in1k
 
-torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_mc_3965496.csv" --csv-separator "," --integer-labels --multiclass  --csv-caption-key="in1k_subset_mc" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=timm-vit_base_patch16_224_1k --pretrained-image
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_mc_3965496.csv" --csv-separator "," --integer-labels --multiclass  --csv-caption-key="in1k_subset_mc" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=timm-vit_base_patch16_224_1k
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{11000..12500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model="timm-vit_base_patch16_224_1k" --integer-labels --ds-filter="imagenet_classnames" --pretrained-head="/scratch/bf996/open_clip/logs/laion15m-vit-b-16-simclr-ep7/checkpoints/epoch_7.pt" --norm_gradient_clip=1e5 --local-loss --gather-with-grad
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model="vit_base_patch16_224" --resume "/scratch/bf996/open_clip/logs/laion15m-vit-b-16-simclr-ep3-6/checkpoints/epoch_6.pt" --use-bn-sync --sim-clr=True --local-loss --gather-with-grad
 
 torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --norm_gradient_clip=1e5 --batch-size=128 --epochs=32 --workers=4 --model=RN50-in1k --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-integerlabels-multiclass-ep8-14/checkpoints/epoch_14.pt" --gather-with-grad --local-loss
 
@@ -351,6 +368,14 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 #### Linear Probe on Int Labels
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-integerlabels-singleclass-ep33-64-alt/checkpoints/epoch_64.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --model=RN50-in1k --zeroshot-frequency=1 --integer-labels
+
+#### Metadata Captions
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --dataset-type webdataset --train-data "/scratch/bf996/imagenet-captions/split/{0000..0141}.tar" --train-num-samples 1200000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --ds-filter="imagenet_classnames" --metacaptions="/scratch/bf996/open_clip/metadata/in1k_metadata.csv" --epochs=128 --workers=8 --model=RN50 --local-loss --gather-with-grad
+
+#### LiT Tuning
+
+torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{10000..11500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=timm-beit_large_patch16_224 --pretrained-image --lock-image --local-loss --gather-with-grad
 
 #### Shift Cipher Experiments
 
@@ -383,24 +408,6 @@ python src/training/main.py --dataset-type webdataset --train-data "/vast/work/p
 torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --report-to wandb --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --imagenet-val "/imagenet/val/" --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=384 --epochs=32 --workers=4 --model=ViT-B-32 --local-loss --gather-with-grad
 
 torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT -m training.main --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..00100}.tar" --train-num-samples 50000 --imagenet-val "/imagenet/val/" --ds-filter="imagenet_classnames" --csv-cleaned=True --zeroshot-frequency=4 --save-frequency 1 --seed 0 --warmup 2000 --batch-size=384 --epochs=32  --model=ViT-B-32 --local-loss --gather-with-grad
-
-#### LiT-Tuning with ImageNet-Tuning
-
-*NOTE: this will result in classifier being misaligned with vision embedding unless embedding dim = 1000
-
---imagenet-train-data="/imagenet/train"
-
---imagenet-tune-freq=2
-
-if imagenet-tune-freq > 0 and epoch % imagenet-tune-freq == 0:
-    args.train_integer_labels = True
-    data = data["imagenet-train"]
-    dataloader = data["imagenet-train"].dataloader
-elif imagenet-tune-freq > 0 and epoch % imagenet-tune-freq != 0:
-    args.train_integer_labels = False
-    data = data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
-    dataloader = data['train'].dataloader
-
 
 ####
 
