@@ -230,19 +230,21 @@ def main():
         scaler = GradScaler() if args.precision == "amp" else None
 
     # optionally resume from a checkpoint
-    start_epoch = 0
+    start_epoch = 0        
     if args.resume is not None:
         if os.path.isfile(args.resume):
             checkpoint = torch.load(args.resume, map_location=device)
+            sd = checkpoint["state_dict"]
+            if args.add_trunk:
+                if next(iter(sd.items()))[0].startswith('module.visual'):
+                    sd = {'module.visual.trunk' + k[len('module.visual'):]: v for k, v in sd.items()}
             if args.fine_tune:
-                sd = checkpoint["state_dict"]
                 if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
                     sd = {k[len('module.'):]: v for k, v in sd.items()}
                 model.load_state_dict(sd)
             elif 'epoch' in checkpoint:
                 # resuming a train checkpoint w/ epoch and optimizer state
                 start_epoch = checkpoint["epoch"]
-                sd = checkpoint["state_dict"]
                 if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
                     sd = {k[len('module.'):]: v for k, v in sd.items()}
                 model.load_state_dict(sd)

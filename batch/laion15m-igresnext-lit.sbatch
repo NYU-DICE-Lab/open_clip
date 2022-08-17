@@ -15,11 +15,6 @@ module purge;
 
 #debug flags
 echo $SLURM_JOB_NAME
-export NCCL_BLOCKING_WAIT=1; 
-export NCCL_DEBUG=INFO; 
-export TORCH_CPP_LOG_LEVEL=INFO; 
-export TORCH_DISTRIBUTED_DEBUG=INFO; 
-export PYTHONFAULTHANDLER=1;
 
 #env vars
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK;
@@ -30,4 +25,4 @@ export MASTER_ADDR="$(hostname -s).hpc.nyu.edu";
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity-rocm.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=timm-igresnext32x48 --norm_gradient_clip=5e4 --pretrained-image --lock-image --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=timm-igresnext32x48 --resume "/scratch/bf996/open_clip/logs/laion15m-lit-igresnext-ep1-2/checkpoints/epoch_2.pt" --norm_gradient_clip=5e4 --pretrained-image --lock-image --local-loss --gather-with-grad'

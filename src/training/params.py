@@ -361,6 +361,11 @@ def parse_args():
         help="Use simclr image transforms",
     )
     parser.add_argument(
+        "--add-trunk",
+        default=False,
+        help="Add the word, trunk, to the model state dict",
+    )
+    parser.add_argument(
         "--integer-labels",
         default=False,
         action='store_true',
