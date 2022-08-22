@@ -21,10 +21,9 @@ echo $SLURM_JOB_NAME
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"
-export NCCL_P2P_LEVEL=NVL
 
 #run command
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity-rocm.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{10000..11500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=4 --model=RN50-in1k --norm_gradient_clip=1e5 --gather-with-grad --local-loss'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=4 --model=timm-swin_base_patch4_window7_224 --pretrained-image --gather-with-grad --local-loss'

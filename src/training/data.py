@@ -148,7 +148,7 @@ def clean_integer_label(label):
             padding = [-1 for i in range(25 - len(label))]
             label = label + padding
         elif len(label) > 25:
-            label = label[:24]
+            label = label[:25]
         if len(label) != 25:
             logging.warning("Integer label {} has length {}".format(label, len(label)))
         return torch.tensor(label)
