@@ -1,13 +1,13 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion_intlabels_%j.log
+#SBATCH --output=l15-400m-swinpt-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
 #SBATCH --mem=384GB
 #SBATCH --gres=gpu:mi50:8
-#SBATCH --job-name=laion_intlabels
+#SBATCH --job-name=l15-400m-swinpt
 #SBATCH --dependency=afterany:22820616
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
@@ -26,4 +26,4 @@ export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity-rocm.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=16 --workers=4 --model=timm-swin_base_patch4_window7_224 --pretrained-image --gather-with-grad --local-loss'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=64 --epochs=16 --workers=4 --model=timm-swin_base_patch4_window7_224 --pretrained-image --gather-with-grad --local-loss'

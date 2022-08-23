@@ -42,7 +42,7 @@ def _convert_to_rgb(image):
 def image_transform(
         image_size: int,
         is_train: bool,
-        simclr_trans: bool,
+        simclr_trans: bool = False,
         mean: Optional[Tuple[float, ...]] = None,
         std: Optional[Tuple[float, ...]] = None,
         resize_longest_max: bool = False,

@@ -366,6 +366,11 @@ def parse_args():
         help="Add the word, trunk, to the model state dict",
     )
     parser.add_argument(
+        "--caption-subset",
+        default=False,
+        help="Run inference only on the classes in the Imagenet-Captioned dataset",
+    )
+    parser.add_argument(
         "--integer-labels",
         default=False,
         action='store_true',

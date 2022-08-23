@@ -13,7 +13,7 @@ from open_clip import tokenize
 
 from .data import shift_cipher
 
-from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx
+from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_cap_classnames, get_imagenet_common_ia_classnames, get_imagenet_common_ir_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx, get_icap_idx, get_common_ia_idx, get_common_ir_idx
 
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
@@ -97,6 +97,7 @@ def run(model, classifier, dataloader, args, idx=None):
         top1, top5, n = 0., 0., 0.
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
             images = images.to(args.device)
+            #TODO: look at this again
             try:
                 s = idx.shape
                 target = target.tolist()
@@ -183,16 +184,22 @@ def build_imagenet(args, model, in_type=""):
     if in_type == "r":
         if args.ds_cipher:
             classnames = get_imagenet_r_cipher()
+        elif args.caption_subset:
+            classnames = get_imagenet_common_ir_classnames()
         else:
             classnames = get_imagenet_r_classnames()
     elif in_type == "a":
         if args.ds_cipher:
             classnames = get_imagenet_a_cipher()
+        elif args.caption_subset:
+            classnames = get_imagenet_common_ia_classnames()
         else:
             classnames = get_imagenet_a_classnames()    
     else:
         if args.ds_cipher:
             classnames = get_imagenet_cipher()
+        elif args.caption_subset:
+            classnames = get_imagenet_cap_classnames()
         else:
             classnames = get_imagenet_classnames()
 
@@ -301,52 +308,56 @@ def zero_shot_eval(model, data, epoch, args):
             logging.info('Finished zero-shot food. Top1 was {}, top5 was {}'.format(top1, top5))
             
     logging.info('Starting zero-shot imagenet.')
-
+    isint = args.linear_probe or args.integer_labels
     classifier = None
     imagenets = []
     if 'imagenet-val' in data:            
-        if classifier is None and not args.linear_probe and not args.integer_labels:
+        if classifier is None and not isint:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
-        top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
+        top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenet-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenet-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot val. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-v2' in data:
-        if classifier is None and not args.linear_probe and not args.integer_labels:
+        if classifier is None and not isint:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
-        top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
+        top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenetv2-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenetv2-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot v2. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-s' in data:
-        if classifier is None and not args.linear_probe and not args.integer_labels:
+        if classifier is None and not isint:
             logging.info('Building zero-shot classifier')
             classifier = build_imagenet(args, model)
-        top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
+        top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenets-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenets-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot sketch. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-r' in data:
-        if args.linear_probe or args.integer_labels:
-            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_ir_idx())
-        else:
+        if not isint:
+            logging.info('Building zero-shot classifier for r')
             classifier = build_imagenet(args, model, "r")
-            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args)
+        if isint:
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else get_ir_idx())
+        else:
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, None)
         results['imagenetr-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenetr-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-r. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-a' in data:
-        if args.linear_probe or args.integer_labels:
-            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_ia_idx())
-        else:
+        if not isint:
+            logging.info('Building zero-shot classifier for a')
             classifier = build_imagenet(args, model, "a")
-            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args)
+        if isint:
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else get_ia_idx())
+        else:
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, None)
         results['imageneta-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imageneta-zeroshot-val-top5'] = top5

@@ -835,7 +835,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
     #     pipeline.extend([
     #         wds.map_dict(image=total, handler=log_and_continue)
     #     ])
-    if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher]):
+    if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.metacaptions]):
         pipeline.extend([
             wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.metacaptions), handler=log_and_continue),
             wds.select(filter_no_caption_text),

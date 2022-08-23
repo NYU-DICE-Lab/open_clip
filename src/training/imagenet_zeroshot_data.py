@@ -1030,6 +1030,19 @@ ia_idx = [6, 11, 13, 15, 17, 22, 23, 27, 30, 37, 39, 42, 47, 50, 57, 70, 71, 76,
 def get_ia_idx():
     return np.array(ia_idx)
 
+icap_idx = [386, 928, 931, 704, 907, 291, 454, 76, 952, 788, 245, 937, 924, 8, 983, 816, 920, 379, 204, 396, 929, 619, 815, 88, 84, 217, 118, 935, 987, 642, 950, 951, 954, 557, 18, 967, 945, 6, 440, 348, 22, 571, 23, 963, 104, 958, 579, 312, 534, 620, 115, 298, 284, 552, 373, 997, 182, 422, 308, 839, 13, 489, 805, 832, 85, 695, 2, 863, 310, 565, 886, 455, 988, 347, 580, 425, 99, 424, 105, 107, 343, 658, 721, 443, 421, 679, 19, 825, 130, 309, 849, 879, 496, 971, 922, 985, 286, 625, 637, 943]
+common_ia = [n for n in ia_idx if n in icap_idx]
+common_ir = [n for n in ir_idx if n in icap_idx]
+
+def get_icap_idx():
+    return np.array(icap_idx)
+
+def get_common_ia_idx():
+    return np.array(common_ia)
+
+def get_common_ir_idx():
+    return np.array(common_ir)
+
 def get_imagenet_r_classnames():
     imagenet_classnames_arr = np.array(imagenet_classnames)
 
@@ -1040,6 +1053,19 @@ def get_imagenet_a_classnames():
     imagenet_classnames_arr = np.array(imagenet_classnames)
 
     return imagenet_classnames_arr[ia_idx].tolist()
+
+def get_imagenet_cap_classnames():
+    imagenet_classnames_arr = np.array(imagenet_classnames)
+
+    return imagenet_classnames_arr[icap_idx].tolist()
+
+def get_imagenet_common_ia_classnames():
+    imagenet_classnames_arr = np.array(imagenet_classnames)
+    return imagenet_classnames_arr[common_ia].tolist()    
+
+def get_imagenet_common_ir_classnames():
+    imagenet_classnames_arr = np.array(imagenet_classnames)
+    return imagenet_classnames_arr[common_ir].tolist() 
 
 openai_imagenet_template = [
     lambda c: f'a bad photo of a {c}.',
