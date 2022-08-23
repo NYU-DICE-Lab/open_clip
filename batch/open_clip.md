@@ -240,15 +240,17 @@ python -u /scratch/bf996/open_clip/src/training/main.py --stanfordcars "/scratch
 
 python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --precision=fp32 --norm_gradient_clip=1e5 --model=RN50
 
-python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --caption-subset=True --workers=8 --model=RN50 --pretrained=openai
+python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --workers=8 --model=RN50 --pretrained=openai --no-ensembling=True --zeroshot-scramble=True
 
-python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --zs-upper=True --model=ViT-B-32 --pretrained=laion400m_e32
+python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=ViT-B-32 --pretrained=openai
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --model=ViT-B-32 --pretrained=laion2b_e16
 
 python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50  --pretrained=yfcc15m --no-ensembling=True; python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50  --pretrained=yfcc15m --no-ensembling=True --zeroshot-scramble=True
 
-python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50 --pretrained=yfcc15m
+python -u /scratch/bf996/open_clip/src/training/main.py --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50 --pretrained=yfcc15m --caption-subset=True
+
+python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-vitb16-fromsimclr-ep1-5/checkpoints/epoch_5.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model="timm-vit_base_patch16_224_1k" --add-trunk=True
 
 #### Resume VL from Pretrained SimCLR
 
@@ -260,7 +262,7 @@ python src/training/main.py --dataset-type webdataset --train-data "/vast/work/p
 
 #### INFERENCE ON TRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-filter-ep17-32/checkpoints/epoch_32.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=RN50;
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-RN50-proper-ep24-32/checkpoints/epoch_32.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=RN50;
 
 --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" 
 
@@ -270,7 +272,7 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-filip-ep1-23/checkpoints/epoch_23.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model="resnet50" --filip=True;
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-coca-ep10/checkpoints/epoch_10.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch"  --zeroshot-frequency=1 --model="coca"
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion50m-swin-coca-ep3/checkpoints/epoch_3.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch"  --zeroshot-frequency=1 --model="coca"
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/regnet-ep4/checkpoints/lit_regnet_ep4.pt" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=timm-regnetx_320 --pretrained-image;
 
@@ -339,6 +341,8 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_mc_3965496.csv" --csv-separator "," --integer-labels --multiclass --csv-caption-key="in1k_subset_mc" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data "/vast/work/public/ml-datasets/laion400m/{00000..01500}.tar" --train-num-samples 15000000 --dataset-type webdataset --integer-labels --multiclass --ds-filter="imagenet_classnames" --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=RN50 --precision=fp32
+
+python src/training/main.py --dataset-type webdataset --train-data "/scratch/bf996/imagenet-captions/split/{0000..0141}.tar" --train-num-samples 1200000 --integer-labels --strict=True --ds-filter="imagenet_captions_classnames" --zeroshot-frequency=8 --save-frequency 1 --lr=1e-3 --warmup 500 --batch-size=256 --epochs=128 --workers=8 --model=RN50-in1k
 
 #### Single Node Dry Run with Integer Labels
 

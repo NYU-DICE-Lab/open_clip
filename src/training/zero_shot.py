@@ -178,13 +178,8 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
                         image_features = model.encode_image(images)
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
-            # print(image_features.size(), classifier.size())
             # measure accuracy
-            # print("logits vs target")
-            # print(torch.argmax(logits[0]), target)
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
-            # print("accuracy: ")
-            # print(acc1)
             top1 += acc1
             top5 += acc5
             n += images.size(0)

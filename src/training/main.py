@@ -235,8 +235,17 @@ def main():
             checkpoint = torch.load(args.resume, map_location=device)
             sd = checkpoint["state_dict"]
             if args.add_trunk:
-                if next(iter(sd.items()))[0].startswith('module.visual'):
-                    sd = {'module.visual.trunk' + k[len('module.visual'):]: v for k, v in sd.items()}
+                keys = list(sd.keys())
+                keys_mod = list()
+                for k in keys:
+                    if k.startswith('module.visual'):
+                        keys_mod.append('module.visual.trunk' + k[len('module.visual'):])
+                    else:
+                        keys_mod.append(k)
+                vals = list(sd.values())
+                sd = {k : v for k, v in zip(keys_mod, vals)}
+                print("add trunk")
+                print(sd.keys())
             if args.fine_tune:
                 if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
                     sd = {k[len('module.'):]: v for k, v in sd.items()}

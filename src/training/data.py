@@ -46,7 +46,7 @@ except:
 
 from open_clip import tokenize
 
-from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template
+from .imagenet_zeroshot_data import *
 
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
@@ -295,6 +295,8 @@ def preprocess_txt(text):
         return tokenize(["NONE"])[0]
 
 def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions):
+    # logging.info("entering filter preprocess: ")
+    # logging.info(text)
     if bool(ds):
         if integer_labels:
             text = clean_captions(str(text))
@@ -314,6 +316,8 @@ def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict,
             text = ""
     if scrambled:
         text = scramble_txt(text)
+    # logging.info("leaving filter preprocess: ")
+    # logging.info(text)
     return text
 
 def scramble_txt(text):
@@ -419,7 +423,6 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                         str_s += " {}".format(gram)
                         
                     flag=True
-
         if cipher or simplecaptions or integer_labels:
             if not flag:
                 str_s = ""
@@ -979,6 +982,8 @@ def get_data(args, preprocess_fns, epoch=0):
     elif args.ds_filter != "":
         if args.ds_filter == "imagenet_classnames":
             args.ds_filter = get_imagenet_classnames()
+        elif args.ds_filter == "imagenet_captions_classnames":
+            args.ds_filter = get_imagenet_captions_classnames()
         else:
             var_names = globals()
             args.ds_filter = var_names[args.ds_filter]
