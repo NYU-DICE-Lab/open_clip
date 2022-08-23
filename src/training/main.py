@@ -132,7 +132,6 @@ def main():
     random_seed(args.seed, 0)
     if args.linear_probe:
         model = timm.create_model(args.model, pretrained=True).to(device=device)
-        print(dir(model))
         preprocess_train = image_transform(args.image_size, is_train=True)
         preprocess_val = image_transform(args.image_size, is_train=False)
     else:

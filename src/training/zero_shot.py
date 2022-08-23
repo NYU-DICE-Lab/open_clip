@@ -96,15 +96,23 @@ def run(model, classifier, dataloader, args, idx=None):
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
-            images = images.to(args.device)
             #TODO: look at this again
-            try:
-                s = idx.shape
-                target = target.tolist()
-                target = torch.tensor(idx[target])
-            except:
-                pass
-            target = target.to(args.device)
+            if args.caption_subset:
+                match_idx = sum(target==i for i in idx).bool().nonzero(as_tuple=True)[0]
+                # print(match_idx)
+                # print(target.size, images.size)
+                target = target[match_idx].to(args.device)
+                images = images[match_idx].to(args.device)
+                # print(target.size, images.size)
+            else:
+                images = images.to(args.device)
+                try:
+                    s = idx.shape
+                    target = target.tolist()
+                    target = torch.tensor(idx[target])
+                except Exception as e:
+                    pass
+                target = target.to(args.device)
             #FIXME: handle larger batch sizes gracefully with gradient caching
             if args.gc:
                 images = images[:min(args.gpumaxbatch, len(images)-1)]
