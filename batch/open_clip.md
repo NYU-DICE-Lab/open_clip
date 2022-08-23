@@ -27,11 +27,6 @@ singularity exec --nv \
   /bin/bash
 ```
 
-```bash
-#IF SINGLE GPU
-unset SLURM_NTASKS;
-```
-
 ### SLURM CPU
 
 ```bash
@@ -166,6 +161,8 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 --inat2021 "/scratch/bf996/datasets/"
 
+--caption-subset=True
+
 #### Dataset Type
 
 --train-data="~/Train_GCC-training_output.csv"       --csv-img-key filepath     --csv-caption-key title
@@ -243,7 +240,7 @@ python -u /scratch/bf996/open_clip/src/training/main.py --stanfordcars "/scratch
 
 python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --precision=fp32 --norm_gradient_clip=1e5 --model=RN50
 
-python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-scramble=True --zeroshot-frequency=1 --workers=16 --model=RN50 --pretrained=openai
+python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch"  --zeroshot-frequency=1 --caption-subset=True --workers=8 --model=RN50 --pretrained=openai
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --zs-upper=True --model=ViT-B-32 --pretrained=laion400m_e32
 
@@ -289,7 +286,7 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resu
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-r "/imagenet-r" --model="coat_tiny" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="tf_efficientnet_b0" --zeroshot-frequency=1 --linear-probe=True --image-size=224
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="resnet50" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model="vit_huge_patch14_224_in21k" --zeroshot-frequency=1 --linear-probe=True --image-size=224
 
