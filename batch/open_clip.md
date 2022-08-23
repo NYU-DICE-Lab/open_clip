@@ -240,7 +240,7 @@ python -u /scratch/bf996/open_clip/src/training/main.py --stanfordcars "/scratch
 
 python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/cc12m/{00000..01243}.tar" --train-num-samples 10968539 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --ds-filter="imagenet_classnames" --zeroshot-frequency=4 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --precision=fp32 --norm_gradient_clip=1e5 --model=RN50
 
-python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch"  --zeroshot-frequency=1 --caption-subset=True --workers=8 --model=RN50 --pretrained=openai
+python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r"   --zeroshot-frequency=1 --caption-subset=True --workers=8 --model=RN50 --pretrained=openai
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --zs-upper=True --model=ViT-B-32 --pretrained=laion400m_e32
 

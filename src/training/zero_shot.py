@@ -90,20 +90,19 @@ def accuracy(output, target, topk=(1,)):
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
-
 def run(model, classifier, dataloader, args, idx=None):
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
+        # print(idx)
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
-            #TODO: look at this again
             if args.caption_subset:
                 match_idx = sum(target==i for i in idx).bool().nonzero(as_tuple=True)[0]
                 # print(match_idx)
-                # print(target.size, images.size)
                 target = target[match_idx].to(args.device)
                 images = images[match_idx].to(args.device)
-                # print(target.size, images.size)
+                if target.size(0) == 0:
+                    continue
             else:
                 images = images.to(args.device)
                 try:
@@ -113,6 +112,13 @@ def run(model, classifier, dataloader, args, idx=None):
                 except Exception as e:
                     pass
                 target = target.to(args.device)
+            if args.caption_subset:
+                idx_l = idx.tolist()
+                # print("before")
+                # print(target)
+                target = torch.tensor([idx_l.index(t) for t in target]).to(args.device)
+                # print("after")
+                # print(target)
             #FIXME: handle larger batch sizes gracefully with gradient caching
             if args.gc:
                 images = images[:min(args.gpumaxbatch, len(images)-1)]
@@ -166,11 +172,9 @@ def run(model, classifier, dataloader, args, idx=None):
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
             # measure accuracy
-            # logging.debug("size of logits: {}, size of target: {}".format(logits.size(), target.size()))
-            # print(logits.size(), target.size())
-            # if idx is not None:
-            #     logits = logits[:, idx]
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+            # print("accuracies")
+            # print(acc1, acc5)
             top1 += acc1
             top5 += acc5
             n += images.size(0)
@@ -218,12 +222,12 @@ def build_imagenet(args, model, in_type=""):
     elif args.shift_cipher:
         classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
 
-    logging.debug("imagenet classnames first 10: {}".format(classnames[:10]))
+    #logging.debug("imagenet classnames first 10: {}".format(classnames[:10]))
     classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 
 def zero_shot_eval(model, data, epoch, args):
-    logging.debug(data)
+    #logging.debug(data)
     
     results = {}
     classifier = None
@@ -316,6 +320,8 @@ def zero_shot_eval(model, data, epoch, args):
             logging.info('Finished zero-shot food. Top1 was {}, top5 was {}'.format(top1, top5))
             
     logging.info('Starting zero-shot imagenet.')
+    if args.caption_subset:
+        logging.info("Using caption subset")
     isint = args.linear_probe or args.integer_labels
     classifier = None
     imagenets = []
@@ -353,7 +359,7 @@ def zero_shot_eval(model, data, epoch, args):
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else get_ir_idx())
         else:
-            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, None)
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else None)
         results['imagenetr-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenetr-zeroshot-val-top5'] = top5
@@ -365,7 +371,7 @@ def zero_shot_eval(model, data, epoch, args):
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else get_ia_idx())
         else:
-            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, None)
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else None)
         results['imageneta-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imageneta-zeroshot-val-top5'] = top5
