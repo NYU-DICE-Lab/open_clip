@@ -13,7 +13,7 @@ from open_clip import tokenize
 
 from .data import shift_cipher
 
-from .imagenet_zeroshot_data import get_imagenet_classnames, get_imagenet_r_classnames, get_imagenet_a_classnames, get_imagenet_cap_classnames, get_imagenet_common_ia_classnames, get_imagenet_common_ir_classnames, get_imagenet_r_cipher, get_imagenet_a_cipher, get_openai_imagenet_template, get_ir_idx, get_ia_idx, get_icap_idx, get_common_ia_idx, get_common_ir_idx
+from .imagenet_zeroshot_data import *
 
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
@@ -112,7 +112,7 @@ def run(model, classifier, dataloader, args, idx=None):
                 except Exception as e:
                     pass
                 target = target.to(args.device)
-            if args.caption_subset:
+            if args.caption_subset and not any([args.integer_labels, args.linear_probe]):
                 idx_l = idx.tolist()
                 # print("before")
                 # print(target)
@@ -171,10 +171,13 @@ def run(model, classifier, dataloader, args, idx=None):
                         image_features = model.encode_image(images)
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
+            # print(image_features.size(), classifier.size())
             # measure accuracy
+            # print("logits vs target")
+            # print(torch.argmax(logits[0]), target)
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
-            # print("accuracies")
-            # print(acc1, acc5)
+            # print("accuracy: ")
+            # print(acc1)
             top1 += acc1
             top5 += acc5
             n += images.size(0)
@@ -222,7 +225,7 @@ def build_imagenet(args, model, in_type=""):
     elif args.shift_cipher:
         classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
 
-    #logging.debug("imagenet classnames first 10: {}".format(classnames[:10]))
+    #logging.info("imagenet classnames first 15: {}".format(classnames[:15]))
     classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 
@@ -359,7 +362,7 @@ def zero_shot_eval(model, data, epoch, args):
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else get_ir_idx())
         else:
-            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else None)
+            top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx_zeroindexed() if args.caption_subset else None)
         results['imagenetr-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imagenetr-zeroshot-val-top5'] = top5
@@ -371,7 +374,7 @@ def zero_shot_eval(model, data, epoch, args):
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else get_ia_idx())
         else:
-            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else None)
+            top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx_zeroindexed() if args.caption_subset else None)
         results['imageneta-zeroshot-val-top1'] = top1
         imagenets.append(top1)
         results['imageneta-zeroshot-val-top5'] = top5

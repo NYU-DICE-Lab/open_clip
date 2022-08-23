@@ -1027,6 +1027,12 @@ ia_idx = [6, 11, 13, 15, 17, 22, 23, 27, 30, 37, 39, 42, 47, 50, 57, 70, 71, 76,
 888, 890, 897, 900, 907, 913, 924, 932, 933, 934, 937, 943, 945, 947, 951, 954, 956, 957, 959, 971, 972, 980, 981, 984, 
 986, 987, 988]
 
+def get_ia_idx_zeroindexed():
+    return np.arange(0, 200, dtype=int)
+
+def get_ir_idx_zeroindexed():
+    return np.arange(0, 200, dtype=int)
+
 def get_ia_idx():
     return np.array(ia_idx)
 
@@ -1042,6 +1048,12 @@ def get_common_ia_idx():
 
 def get_common_ir_idx():
     return np.array(common_ir)
+
+def get_common_ia_idx_zeroindexed():
+    return np.array([ia_idx.index(k) for k in common_ia])
+
+def get_common_ir_idx_zeroindexed():
+    return np.array([ir_idx.index(k) for k in common_ir])
 
 def get_imagenet_r_classnames():
     imagenet_classnames_arr = np.array(imagenet_classnames)
