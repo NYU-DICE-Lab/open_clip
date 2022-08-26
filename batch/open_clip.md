@@ -56,6 +56,7 @@ singularity \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   /scratch/work/public/singularity/rocm5.2.0-ubuntu20.04.4.sif \
   /bin/bash
 ```
@@ -327,6 +328,10 @@ python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/b
 #### SINGLE NODE TRAINING with SIMCLR
 
 python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --sim-clr=True --save-frequency 1 --warmup 2000 --batch-size=32 --epochs=16 --workers=8 --model="vit_base_patch16_224" --use-bn-sync
+
+#### Single Node Training with Imagenet-Captions-100
+
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/imagenet-captions/imagenet-captions-201-complete.csv" --csv-img-key path --csv-caption-key caption --csv-separator "," --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --caption-subset=True --lr=1e-3 --sim-clr-trans=True --warmup 2000 --batch-size=32 --epochs=128 --workers=8 --model=RN50
 
 #### Single Node Training with Schema
 
