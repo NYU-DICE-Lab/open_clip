@@ -29,7 +29,7 @@ def reorder_matrix(mat, showdendrogram = False):
     # Plot distance matrix.
 
 def show_matrix(args, mat, title):
-    fig = plt.figure(figsize=(28, 28), dpi=1200)
+    fig = plt.figure(figsize=(28, 28), dpi=200)
     fig.suptitle(title, ha = "center", fontsize = 20)
 
     axmatrix = fig.add_axes([0, 0, 0.9,0.9], label='axes1')
@@ -43,7 +43,7 @@ def show_matrix(args, mat, title):
     axcolor = fig.add_axes([0.95,0,0.02,0.9])
     plt.colorbar(im, cax=axcolor)
     save_path = os.path.join(args.conf_path, 'clustered_confusion_matrix_{}.svg'.format(res))
-    fig.savefig(save_path, format='svg', dpi=1200)
+    fig.savefig(save_path, format='svg', dpi=200)
 
 # def show_5x5_img_grid(indices):
 #     curr_row = 0
@@ -75,9 +75,9 @@ def write_confusion_matrix(args, output, labels, classes):
     res = str(datetime.now())[:19]
     res = res.translate({ord(":"): "-", ord(" "):"_"})
     df_cm.to_csv(os.path.join(args.conf_path, "confusion_matrix_{}.csv".format(res)))
-    plt.figure(figsize = (72,42), dpi=1200)
+    plt.figure(figsize = (72,42), dpi=200)
     sn.heatmap(df_cm, annot=True)
-    plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=1200)
+    plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=200)
     logit_concat = np.concatenate(args.logits, axis=0)
 
     #class-class clustering matrix
