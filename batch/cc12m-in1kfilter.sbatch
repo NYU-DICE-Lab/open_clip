@@ -7,7 +7,7 @@
 #SBATCH --time=47:59:00
 #SBATCH --mem=256GB
 #SBATCH --gres=gpu:mi50:8
-#SBATCH --dependency=afterany:23389307
+#SBATCH --dependency=afterany:24164868
 #SBATCH --job-name=cc12min1kfilter
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu

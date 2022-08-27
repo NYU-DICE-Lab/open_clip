@@ -14,7 +14,7 @@ from open_clip import tokenize
 from .data import shift_cipher
 
 from .imagenet_zeroshot_data import *
-
+from .metrics import *
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
     from .cars_zeroshot_data import cars_classnames, cars_template
@@ -94,6 +94,9 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
+        args.y_pred = []
+        args.y_true = []
+        args.logits = []
         for images, target in tqdm(dataloader, unit_scale=args.batch_size):
             if args.caption_subset:
                 if any([args.integer_labels, args.linear_probe]) and split == "r":
@@ -179,6 +182,8 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
             # measure accuracy
+            args.logits.append(logits.cpu().detach().numpy())
+            log_confusion_matrix(args, logits, target)
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
@@ -186,6 +191,7 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
 
     top1 = (top1 / n)
     top5 = (top5 / n)
+    write_confusion_matrix(args, logits, target, args.classnames)
     return top1, top5
 
 def to_upper(l):
@@ -228,6 +234,7 @@ def build_imagenet(args, model, in_type=""):
         classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
 
     #logging.info("imagenet classnames first 15: {}".format(classnames[:15]))
+    args.classnames = classnames
     classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 

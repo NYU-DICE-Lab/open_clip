@@ -231,7 +231,7 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 #### INFERENCE ON PRETRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=ViT-B-32  --pretrained=openai  --precision=fp32
+python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
 
 python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=yfcc15m  --precision=fp32
 
@@ -243,7 +243,7 @@ python src/training/main.py --dataset-type webdataset --train-data "/vast/work/p
 
 python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --workers=8 --model=RN50 --pretrained=openai --no-ensembling=True --zeroshot-scramble=True
 
-python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=ViT-B-32 --pretrained=openai
+python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --model=RN50 --pretrained=openai --caption-subset=True
 
 python -u /scratch/bf996/open_clip/src/training/main.py --imagenet-val "/imagenet/val/"  --imagenet-a "/imagenet-a"  --imagenet-r "/imagenet-r" --model=ViT-B-32 --pretrained=laion2b_e16
 

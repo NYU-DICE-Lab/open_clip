@@ -76,11 +76,12 @@ def main():
     args.log_path = None
     if is_master(args, local=args.log_local):
         log_base_path = os.path.join(args.logs, args.name)
+        args.log_base_path = log_base_path
         os.makedirs(log_base_path, exist_ok=True)
         log_filename = f'out-{args.rank}' if args.log_local else 'out.log'
         args.log_path = os.path.join(log_base_path, log_filename)
         if os.path.exists(args.log_path):
-            print(
+            logging.debug(
                 "Error. Experiment already exists. Use --name {} to specify a new experiment."
             )
             return -1
