@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=128GB
+#SBATCH --mem=256GB
 #SBATCH --gres=gpu:4
 #SBATCH --job-name=l15400swin-lit-ul4
 #SBATCH --mail-type=BEGIN,END
@@ -28,4 +28,8 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --schema="/scratch/bf996/open_clip/schema/laion15m-400m-in1k.txt" --ds-filter="imagenet_classnames" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=timm-swin_base_patch4_window7_224 --pretrained-image --lock-image --lock-image-unlocked-groups=4 --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type 
+webdataset --schema="/scratch/bf996/open_clip/schema/laion15m-400m-in1k.txt" --ds-filter="imagenet_classnames" 
+--integer-labels --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" 
+--imagenet-v2 
+"/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=256 --epochs=32 --workers=8 --model=timm-swin_base_patch4_window7_224 --pretrained-image --lock-image --lock-image-unlocked-groups=4  --local-loss --gather-with-grad'

@@ -191,7 +191,9 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
 
     top1 = (top1 / n)
     top5 = (top5 / n)
-    write_confusion_matrix(args, logits, target, args.classnames)
+    #TODO: debug integer labels
+    if not args.integer_labels:
+        write_confusion_matrix(args, logits, target, args.classnames)
     return top1, top5
 
 def to_upper(l):
@@ -232,7 +234,6 @@ def build_imagenet(args, model, in_type=""):
         classnames = to_lower(classnames)
     elif args.shift_cipher:
         classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
-
     #logging.info("imagenet classnames first 15: {}".format(classnames[:15]))
     args.classnames = classnames
     classifier = zero_shot_classifier(model, classnames, template, args)

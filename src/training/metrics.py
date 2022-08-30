@@ -79,7 +79,7 @@ def write_confusion_matrix(args, output, labels, classes):
     sn.heatmap(df_cm, annot=True)
     plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=200)
     logit_concat = np.concatenate(args.logits, axis=0)
-
+    plt.close('all')
     #class-class clustering matrix
     corr_mat_logits = np.corrcoef(logit_concat, rowvar=False)
     corr_mat_logits[corr_mat_logits < 0] = 0 # not quite necessary, but helps sharpen the blocks

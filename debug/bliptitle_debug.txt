@@ -1,0 +1,701 @@
+2022-08-28,11:36:39 | INFO |   C: 3.16
+2022-08-28,11:36:39 | INFO |   add_trunk: False
+2022-08-28,11:36:39 | INFO |   air: None
+2022-08-28,11:36:39 | INFO |   alt: False
+2022-08-28,11:36:39 | INFO |   batch_size: 128
+2022-08-28,11:36:39 | INFO |   beta1: 0.9
+2022-08-28,11:36:39 | INFO |   beta2: 0.999
+2022-08-28,11:36:39 | INFO |   caption_subset: True
+2022-08-28,11:36:39 | INFO |   checkpoint_path: ./logs/2022_08_28-11_36_37-model_RN50-lr_0.0005-b_128-j_1-p_amp/checkpoints
+2022-08-28,11:36:39 | INFO |   clamp: 0
+2022-08-28,11:36:39 | INFO |   copy_codebase: False
+2022-08-28,11:36:39 | INFO |   csv_caption_key: blipcaption_title
+2022-08-28,11:36:39 | INFO |   csv_cleaned: False
+2022-08-28,11:36:39 | INFO |   csv_img_key: path
+2022-08-28,11:36:39 | INFO |   csv_scrambled: False
+2022-08-28,11:36:39 | INFO |   csv_separator: ,
+2022-08-28,11:36:39 | INFO |   dataset_resampled: False
+2022-08-28,11:36:39 | INFO |   dataset_type: auto
+2022-08-28,11:36:39 | INFO |   dcl: False
+2022-08-28,11:36:39 | INFO |   ddp_static_graph: False
+2022-08-28,11:36:39 | INFO |   debug: False
+2022-08-28,11:36:39 | INFO |   device: cuda:0
+2022-08-28,11:36:39 | INFO |   dist_backend: nccl
+2022-08-28,11:36:39 | INFO |   dist_url: env://
+2022-08-28,11:36:39 | INFO |   distributed: False
+2022-08-28,11:36:39 | INFO |   dry_run: False
+2022-08-28,11:36:39 | INFO |   ds_cipher: False
+2022-08-28,11:36:39 | INFO |   ds_filter: 
+2022-08-28,11:36:39 | INFO |   elp: False
+2022-08-28,11:36:39 | INFO |   epochs: 256
+2022-08-28,11:36:39 | INFO |   eps: 1e-08
+2022-08-28,11:36:39 | INFO |   filip: False
+2022-08-28,11:36:39 | INFO |   fine_tune: False
+2022-08-28,11:36:39 | INFO |   flowers: None
+2022-08-28,11:36:39 | INFO |   food: None
+2022-08-28,11:36:39 | INFO |   force_quick_gelu: False
+2022-08-28,11:36:39 | INFO |   gather_with_grad: False
+2022-08-28,11:36:39 | INFO |   gc: False
+2022-08-28,11:36:39 | INFO |   gpumaxbatch: 32
+2022-08-28,11:36:39 | INFO |   grad_checkpointing: False
+2022-08-28,11:36:39 | INFO |   horovod: False
+2022-08-28,11:36:39 | INFO |   image_size: 224
+2022-08-28,11:36:39 | INFO |   image_ssl_loss_weight: 0.05
+2022-08-28,11:36:39 | INFO |   imagenet_a: /imagenet-a
+2022-08-28,11:36:39 | INFO |   imagenet_r: /imagenet-r
+2022-08-28,11:36:39 | INFO |   imagenet_s: /imagenet-sketch
+2022-08-28,11:36:39 | INFO |   imagenet_train: None
+2022-08-28,11:36:39 | INFO |   imagenet_tune_freq: 0
+2022-08-28,11:36:39 | INFO |   imagenet_v2: /scratch/bf996/datasets
+2022-08-28,11:36:39 | INFO |   imagenet_val: /imagenet/val/
+2022-08-28,11:36:39 | INFO |   img_weight: 0.5
+2022-08-28,11:36:39 | INFO |   inat2017: None
+2022-08-28,11:36:39 | INFO |   inat2018: None
+2022-08-28,11:36:39 | INFO |   inat2021: None
+2022-08-28,11:36:39 | INFO |   integer_labels: False
+2022-08-28,11:36:39 | INFO |   linear_probe: False
+2022-08-28,11:36:39 | INFO |   local_loss: False
+2022-08-28,11:36:39 | INFO |   local_rank: 0
+2022-08-28,11:36:39 | INFO |   lock_image: False
+2022-08-28,11:36:39 | INFO |   lock_image_freeze_bn_stats: False
+2022-08-28,11:36:39 | INFO |   lock_image_unlocked_groups: 0
+2022-08-28,11:36:39 | INFO |   lock_text: False
+2022-08-28,11:36:39 | INFO |   log_base_path: ./logs/2022_08_28-11_36_37-model_RN50-lr_0.0005-b_128-j_1-p_amp
+2022-08-28,11:36:39 | INFO |   log_level: 20
+2022-08-28,11:36:39 | INFO |   log_local: False
+2022-08-28,11:36:39 | INFO |   log_path: ./logs/2022_08_28-11_36_37-model_RN50-lr_0.0005-b_128-j_1-p_amp/out.log
+2022-08-28,11:36:39 | INFO |   logs: ./logs/
+2022-08-28,11:36:39 | INFO |   lr: 0.0005
+2022-08-28,11:36:39 | INFO |   metacaptions: 
+2022-08-28,11:36:39 | INFO |   mlm: False
+2022-08-28,11:36:39 | INFO |   model: RN50
+2022-08-28,11:36:39 | INFO |   multiclass: False
+2022-08-28,11:36:39 | INFO |   name: 2022_08_28-11_36_37-model_RN50-lr_0.0005-b_128-j_1-p_amp
+2022-08-28,11:36:39 | INFO |   no_ensembling: False
+2022-08-28,11:36:39 | INFO |   no_set_device_rank: False
+2022-08-28,11:36:39 | INFO |   norm_gradient_clip: None
+2022-08-28,11:36:39 | INFO |   precision: amp
+2022-08-28,11:36:39 | INFO |   pretrained: 
+2022-08-28,11:36:39 | INFO |   pretrained_head: 
+2022-08-28,11:36:39 | INFO |   pretrained_image: False
+2022-08-28,11:36:39 | INFO |   ramping: False
+2022-08-28,11:36:39 | INFO |   rank: 0
+2022-08-28,11:36:39 | INFO |   report_to: 
+2022-08-28,11:36:39 | INFO |   resume: None
+2022-08-28,11:36:39 | INFO |   save_frequency: 4
+2022-08-28,11:36:39 | INFO |   save_most_recent: False
+2022-08-28,11:36:39 | INFO |   schema: None
+2022-08-28,11:36:39 | INFO |   seed: 0
+2022-08-28,11:36:39 | INFO |   shift_cipher: None
+2022-08-28,11:36:39 | INFO |   sim_clr: False
+2022-08-28,11:36:39 | INFO |   sim_clr_trans: True
+2022-08-28,11:36:39 | INFO |   simplecaptions: False
+2022-08-28,11:36:39 | INFO |   skip_scheduler: False
+2022-08-28,11:36:39 | INFO |   stanfordcars: None
+2022-08-28,11:36:39 | INFO |   strict: False
+2022-08-28,11:36:39 | INFO |   tensorboard: False
+2022-08-28,11:36:39 | INFO |   tensorboard_path: 
+2022-08-28,11:36:39 | INFO |   text_ssl_loss_weight: 0.05
+2022-08-28,11:36:39 | INFO |   text_weight: 0.5
+2022-08-28,11:36:39 | INFO |   torchscript: False
+2022-08-28,11:36:39 | INFO |   trace: False
+2022-08-28,11:36:39 | INFO |   train_data: /scratch/bf996/imagenet-captions/imagenet-captions-201-complete-trimmed.csv
+2022-08-28,11:36:39 | INFO |   train_num_samples: None
+2022-08-28,11:36:39 | INFO |   use_bn_sync: False
+2022-08-28,11:36:39 | INFO |   val_data: None
+2022-08-28,11:36:39 | INFO |   val_frequency: 1
+2022-08-28,11:36:39 | INFO |   val_num_samples: None
+2022-08-28,11:36:39 | INFO |   vssl: False
+2022-08-28,11:36:39 | INFO |   wandb: False
+2022-08-28,11:36:39 | INFO |   wandb_notes: 
+2022-08-28,11:36:39 | INFO |   warmup: 2000
+2022-08-28,11:36:39 | INFO |   wd: 0.2
+2022-08-28,11:36:39 | INFO |   workers: 1
+2022-08-28,11:36:39 | INFO |   world_size: 1
+2022-08-28,11:36:39 | INFO |   zeroshot_frequency: 4
+2022-08-28,11:36:39 | INFO |   zeroshot_scramble: False
+2022-08-28,11:36:39 | INFO |   zs_lower: False
+2022-08-28,11:36:39 | INFO |   zs_upper: False
+2022-08-28,11:36:40 | INFO | Start epoch 0
+MIOpen(HIP): Warning [SQLiteBase] Missing system database file: gfx906_60.kdb Performance may degrade. Please follow instructions to install: https://github.com/ROCmSoftwarePlatform/MIOpen#installing-miopen-kernels-package
+Fatal Python error: Segmentation fault
+
+Thread 0x0000151be5dfe700 (most recent call first):
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 312 in wait
+  File "/ext3/miniconda3/lib/python3.9/multiprocessing/queues.py", line 231 in _feed
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 917 in run
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 980 in _bootstrap_inner
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 937 in _bootstrap
+
+Thread 0x0000151c3d243700 (most recent call first):
+  File "/ext3/miniconda3/lib/python3.9/selectors.py", line 416 in select
+  File "/ext3/miniconda3/lib/python3.9/multiprocessing/connection.py", line 936 in wait
+  File "/ext3/miniconda3/lib/python3.9/multiprocessing/connection.py", line 429 in _poll
+  File "/ext3/miniconda3/lib/python3.9/multiprocessing/connection.py", line 262 in poll
+  File "/ext3/miniconda3/lib/python3.9/multiprocessing/queues.py", line 113 in get
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/utils/data/_utils/pin_memory.py", line 28 in _pin_memory_loop
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 917 in run
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 980 in _bootstrap_inner
+  File "/ext3/miniconda3/lib/python3.9/threading.py", line 937 in _bootstrap
+
+Thread 0x0000151f0924d740 (most recent call first):
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 453 in _conv_forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 457 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 180 in stem
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 187 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 447 in encode_image
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 469 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/training/train.py", line 212 in train_one_epoch
+  File "/scratch/bf996/open_clip/src/training/main.py", line 343 in main
+  File "/scratch/bf996/open_clip/src/training/main.py", line 395 in <module>
+Segmentation fault (core dumped)
+Singularity> python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/imagenet-captions/imagenet-captions-201-complete-trimmed.csv" --csv-img-key path --csv-caption-key blipcaption_title --csv-separator "," --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=4 --save-frequency 4 --caption-subset=True --sim-clr-trans=True --warmup 2000 --batch-size=128 --epochs=256 --workers=0 --model=RN50
+[I debug.cpp:47] [c10d] The debug level is set to INFO.
+[nltk_data] Downloading package stopwords to /home/bf996/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+[nltk_data] Downloading package wordnet to /home/bf996/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+[nltk_data] Downloading package omw-1.4 to /home/bf996/nltk_data...
+[nltk_data]   Package omw-1.4 is already up-to-date!
+[nltk_data] Downloading package punkt to /home/bf996/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /home/bf996/nltk_data...
+[nltk_data]   Package averaged_perceptron_tagger is already up-to-
+[nltk_data]       date!
+[nltk_data] Downloading package tagsets to /home/bf996/nltk_data...
+[nltk_data]   Package tagsets is already up-to-date!
+cuda:0
+2022-08-28,11:37:39 | INFO | Running with a single process. Device cuda:0.
+2022-08-28,11:37:39 | INFO | Loading RN50 model config.
+2022-08-28,11:37:40 | INFO | Model:
+2022-08-28,11:37:40 | INFO | CLIP(
+  (visual): ModifiedResNet(
+    (conv1): Conv2d(3, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+    (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu1): ReLU(inplace=True)
+    (conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (bn2): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu2): ReLU(inplace=True)
+    (conv3): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (bn3): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu3): ReLU(inplace=True)
+    (avgpool): AvgPool2d(kernel_size=2, stride=2, padding=0)
+    (layer1): Sequential(
+      (0): Bottleneck(
+        (conv1): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+        (downsample): Sequential(
+          (-1): AvgPool2d(kernel_size=1, stride=1, padding=0)
+          (0): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+    )
+    (layer2): Sequential(
+      (0): Bottleneck(
+        (conv1): Conv2d(256, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): AvgPool2d(kernel_size=2, stride=2, padding=0)
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+        (downsample): Sequential(
+          (-1): AvgPool2d(kernel_size=2, stride=2, padding=0)
+          (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (3): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+    )
+    (layer3): Sequential(
+      (0): Bottleneck(
+        (conv1): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): AvgPool2d(kernel_size=2, stride=2, padding=0)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+        (downsample): Sequential(
+          (-1): AvgPool2d(kernel_size=2, stride=2, padding=0)
+          (0): Conv2d(512, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (1): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (3): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (4): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (5): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+    )
+    (layer4): Sequential(
+      (0): Bottleneck(
+        (conv1): Conv2d(1024, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): AvgPool2d(kernel_size=2, stride=2, padding=0)
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+        (downsample): Sequential(
+          (-1): AvgPool2d(kernel_size=2, stride=2, padding=0)
+          (0): Conv2d(1024, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (1): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu1): ReLU(inplace=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu2): ReLU(inplace=True)
+        (avgpool): Identity()
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu3): ReLU(inplace=True)
+      )
+    )
+    (attnpool): AttentionPool2d(
+      (k_proj): Linear(in_features=2048, out_features=2048, bias=True)
+      (q_proj): Linear(in_features=2048, out_features=2048, bias=True)
+      (v_proj): Linear(in_features=2048, out_features=2048, bias=True)
+      (c_proj): Linear(in_features=2048, out_features=1024, bias=True)
+    )
+  )
+  (transformer): Transformer(
+    (resblocks): ModuleList(
+      (0): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (1): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (2): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (3): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (4): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (5): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (6): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (7): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (8): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (9): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (10): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+      (11): ResidualAttentionBlock(
+        (attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (ln_1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (mlp): Sequential(
+          (c_fc): Linear(in_features=512, out_features=2048, bias=True)
+          (gelu): GELU(approximate=none)
+          (c_proj): Linear(in_features=2048, out_features=512, bias=True)
+        )
+        (ln_2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (token_embedding): Embedding(49408, 512)
+  (ln_final): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+)
+2022-08-28,11:37:40 | INFO | Params:
+2022-08-28,11:37:40 | INFO |   C: 3.16
+2022-08-28,11:37:40 | INFO |   add_trunk: False
+2022-08-28,11:37:40 | INFO |   air: None
+2022-08-28,11:37:40 | INFO |   alt: False
+2022-08-28,11:37:40 | INFO |   batch_size: 128
+2022-08-28,11:37:40 | INFO |   beta1: 0.9
+2022-08-28,11:37:40 | INFO |   beta2: 0.999
+2022-08-28,11:37:40 | INFO |   caption_subset: True
+2022-08-28,11:37:40 | INFO |   checkpoint_path: ./logs/2022_08_28-11_37_39-model_RN50-lr_0.0005-b_128-j_0-p_amp/checkpoints
+2022-08-28,11:37:40 | INFO |   clamp: 0
+2022-08-28,11:37:40 | INFO |   copy_codebase: False
+2022-08-28,11:37:40 | INFO |   csv_caption_key: blipcaption_title
+2022-08-28,11:37:40 | INFO |   csv_cleaned: False
+2022-08-28,11:37:40 | INFO |   csv_img_key: path
+2022-08-28,11:37:40 | INFO |   csv_scrambled: False
+2022-08-28,11:37:40 | INFO |   csv_separator: ,
+2022-08-28,11:37:40 | INFO |   dataset_resampled: False
+2022-08-28,11:37:40 | INFO |   dataset_type: auto
+2022-08-28,11:37:40 | INFO |   dcl: False
+2022-08-28,11:37:40 | INFO |   ddp_static_graph: False
+2022-08-28,11:37:40 | INFO |   debug: False
+2022-08-28,11:37:40 | INFO |   device: cuda:0
+2022-08-28,11:37:40 | INFO |   dist_backend: nccl
+2022-08-28,11:37:40 | INFO |   dist_url: env://
+2022-08-28,11:37:40 | INFO |   distributed: False
+2022-08-28,11:37:40 | INFO |   dry_run: False
+2022-08-28,11:37:40 | INFO |   ds_cipher: False
+2022-08-28,11:37:40 | INFO |   ds_filter: 
+2022-08-28,11:37:40 | INFO |   elp: False
+2022-08-28,11:37:40 | INFO |   epochs: 256
+2022-08-28,11:37:40 | INFO |   eps: 1e-08
+2022-08-28,11:37:40 | INFO |   filip: False
+2022-08-28,11:37:40 | INFO |   fine_tune: False
+2022-08-28,11:37:40 | INFO |   flowers: None
+2022-08-28,11:37:40 | INFO |   food: None
+2022-08-28,11:37:40 | INFO |   force_quick_gelu: False
+2022-08-28,11:37:40 | INFO |   gather_with_grad: False
+2022-08-28,11:37:40 | INFO |   gc: False
+2022-08-28,11:37:40 | INFO |   gpumaxbatch: 32
+2022-08-28,11:37:40 | INFO |   grad_checkpointing: False
+2022-08-28,11:37:40 | INFO |   horovod: False
+2022-08-28,11:37:40 | INFO |   image_size: 224
+2022-08-28,11:37:40 | INFO |   image_ssl_loss_weight: 0.05
+2022-08-28,11:37:40 | INFO |   imagenet_a: /imagenet-a
+2022-08-28,11:37:40 | INFO |   imagenet_r: /imagenet-r
+2022-08-28,11:37:40 | INFO |   imagenet_s: /imagenet-sketch
+2022-08-28,11:37:40 | INFO |   imagenet_train: None
+2022-08-28,11:37:40 | INFO |   imagenet_tune_freq: 0
+2022-08-28,11:37:40 | INFO |   imagenet_v2: /scratch/bf996/datasets
+2022-08-28,11:37:40 | INFO |   imagenet_val: /imagenet/val/
+2022-08-28,11:37:40 | INFO |   img_weight: 0.5
+2022-08-28,11:37:40 | INFO |   inat2017: None
+2022-08-28,11:37:40 | INFO |   inat2018: None
+2022-08-28,11:37:40 | INFO |   inat2021: None
+2022-08-28,11:37:40 | INFO |   integer_labels: False
+2022-08-28,11:37:40 | INFO |   linear_probe: False
+2022-08-28,11:37:40 | INFO |   local_loss: False
+2022-08-28,11:37:40 | INFO |   local_rank: 0
+2022-08-28,11:37:40 | INFO |   lock_image: False
+2022-08-28,11:37:40 | INFO |   lock_image_freeze_bn_stats: False
+2022-08-28,11:37:40 | INFO |   lock_image_unlocked_groups: 0
+2022-08-28,11:37:40 | INFO |   lock_text: False
+2022-08-28,11:37:40 | INFO |   log_base_path: ./logs/2022_08_28-11_37_39-model_RN50-lr_0.0005-b_128-j_0-p_amp
+2022-08-28,11:37:40 | INFO |   log_level: 20
+2022-08-28,11:37:40 | INFO |   log_local: False
+2022-08-28,11:37:40 | INFO |   log_path: ./logs/2022_08_28-11_37_39-model_RN50-lr_0.0005-b_128-j_0-p_amp/out.log
+2022-08-28,11:37:40 | INFO |   logs: ./logs/
+2022-08-28,11:37:40 | INFO |   lr: 0.0005
+2022-08-28,11:37:40 | INFO |   metacaptions: 
+2022-08-28,11:37:40 | INFO |   mlm: False
+2022-08-28,11:37:40 | INFO |   model: RN50
+2022-08-28,11:37:40 | INFO |   multiclass: False
+2022-08-28,11:37:40 | INFO |   name: 2022_08_28-11_37_39-model_RN50-lr_0.0005-b_128-j_0-p_amp
+2022-08-28,11:37:40 | INFO |   no_ensembling: False
+2022-08-28,11:37:40 | INFO |   no_set_device_rank: False
+2022-08-28,11:37:40 | INFO |   norm_gradient_clip: None
+2022-08-28,11:37:40 | INFO |   precision: amp
+2022-08-28,11:37:40 | INFO |   pretrained: 
+2022-08-28,11:37:40 | INFO |   pretrained_head: 
+2022-08-28,11:37:40 | INFO |   pretrained_image: False
+2022-08-28,11:37:40 | INFO |   ramping: False
+2022-08-28,11:37:40 | INFO |   rank: 0
+2022-08-28,11:37:40 | INFO |   report_to: 
+2022-08-28,11:37:40 | INFO |   resume: None
+2022-08-28,11:37:40 | INFO |   save_frequency: 4
+2022-08-28,11:37:40 | INFO |   save_most_recent: False
+2022-08-28,11:37:40 | INFO |   schema: None
+2022-08-28,11:37:40 | INFO |   seed: 0
+2022-08-28,11:37:40 | INFO |   shift_cipher: None
+2022-08-28,11:37:40 | INFO |   sim_clr: False
+2022-08-28,11:37:40 | INFO |   sim_clr_trans: True
+2022-08-28,11:37:40 | INFO |   simplecaptions: False
+2022-08-28,11:37:40 | INFO |   skip_scheduler: False
+2022-08-28,11:37:40 | INFO |   stanfordcars: None
+2022-08-28,11:37:40 | INFO |   strict: False
+2022-08-28,11:37:40 | INFO |   tensorboard: False
+2022-08-28,11:37:40 | INFO |   tensorboard_path: 
+2022-08-28,11:37:40 | INFO |   text_ssl_loss_weight: 0.05
+2022-08-28,11:37:40 | INFO |   text_weight: 0.5
+2022-08-28,11:37:40 | INFO |   torchscript: False
+2022-08-28,11:37:40 | INFO |   trace: False
+2022-08-28,11:37:40 | INFO |   train_data: /scratch/bf996/imagenet-captions/imagenet-captions-201-complete-trimmed.csv
+2022-08-28,11:37:40 | INFO |   train_num_samples: None
+2022-08-28,11:37:40 | INFO |   use_bn_sync: False
+2022-08-28,11:37:40 | INFO |   val_data: None
+2022-08-28,11:37:40 | INFO |   val_frequency: 1
+2022-08-28,11:37:40 | INFO |   val_num_samples: None
+2022-08-28,11:37:40 | INFO |   vssl: False
+2022-08-28,11:37:40 | INFO |   wandb: False
+2022-08-28,11:37:40 | INFO |   wandb_notes: 
+2022-08-28,11:37:40 | INFO |   warmup: 2000
+2022-08-28,11:37:40 | INFO |   wd: 0.2
+2022-08-28,11:37:40 | INFO |   workers: 0
+2022-08-28,11:37:40 | INFO |   world_size: 1
+2022-08-28,11:37:40 | INFO |   zeroshot_frequency: 4
+2022-08-28,11:37:40 | INFO |   zeroshot_scramble: False
+2022-08-28,11:37:40 | INFO |   zs_lower: False
+2022-08-28,11:37:40 | INFO |   zs_upper: False
+2022-08-28,11:37:41 | INFO | Start epoch 0
+MIOpen(HIP): Warning [SQLiteBase] Missing system database file: gfx906_60.kdb Performance may degrade. Please follow instructions to install: https://github.com/ROCmSoftwarePlatform/MIOpen#installing-miopen-kernels-package
+Fatal Python error: Segmentation fault
+
+Thread 0x000014c9d3369740 (most recent call first):
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 453 in _conv_forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 457 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 180 in stem
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 187 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 447 in encode_image
+  File "/scratch/bf996/open_clip/src/open_clip/model.py", line 469 in forward
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130 in _call_impl
+  File "/scratch/bf996/open_clip/src/training/train.py", line 212 in train_one_epoch
+  File "/scratch/bf996/open_clip/src/training/main.py", line 343 in main
+  File "/scratch/bf996/open_clip/src/training/main.py", line 395 in <module>
+Segmentation fault (core dumped)

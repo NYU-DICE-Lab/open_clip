@@ -352,96 +352,102 @@ WARNING: can return string or bool, depending on arguments provided
 """
 
 def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None, integer_labels=False, metacaptions=None):
-    #try:
-        flag = False
-        s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
-        if len(s) > 77:
-            s = s[:76]
-        str_s = " ".join(w for w in s)
+    flag = False
+    s = list(lemmatizer.lemmatize(t) for t in s.split(" "))
+    #s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
+    if len(s) > 76:
+        s = s[:75]
+    str_s = " ".join(w for w in s)
+    if ds:
+        ds = [t.lower().strip() for t in ds] + [t.lower().strip()+"s" for t in ds]
+    for count, word in enumerate(s):
 
-        for count, word in enumerate(s):
+        if strict and flag:
+            break
+        grams = []
+
+        for i in range(ngram):
+            if count + i - 1 > len(s):
+                continue
+            gram = " ".join(w for w in s[count:count+i+1] if len(w) > 2)
+            grams.append(gram)
+
+        for i, gram in enumerate(grams):
 
             if strict and flag:
                 break
-            grams = []
 
-            for i in range(ngram):
-                if count + i - 1 > len(s):
+            gram_t = gram
+
+            if cipher:
+                k = ""
+                for c in gram:
+                    nextc = cipher_dict.get(c) or c
+                    k = k + nextc
+                gram_t = k
+
+            if ds and gram_t in ds:
+                if integer_labels and not flag:
+                    str_s = "{}".format(ds.index(gram_t))
+                elif integer_labels:
+                    idx_insert = ds.index(gram_t)
+                    if str_s.find(str(idx_insert)) == -1:
+                        str_s += ", {}".format(idx_insert)
                     continue
-                gram = " ".join(w for w in s[count:count+i+1] if len(w) > 2)
-                grams.append(gram)
-
-            for i, gram in enumerate(grams):
-
-                if strict and flag:
-                    break
-
-                gram_t = gram
-
+                elif not metacaptions.empty:
+                    idx_insert = ds.index(gram_t)
+                    row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
+                    if not row.empty:
+                        row = row.iloc[0]
+                        for field in [row['functional_classname'], row['subclass'], row['relations_locations'], row['relations_objects'], row['relations_events']]:
+                            if field == "":
+                                continue
+                            items = field.split(", ")
+                            for item in items:
+                                if str_s.find(item) == -1:
+                                    str_s = str_s + " " + item
+                if simplecaptions and not flag:
+                    str_s = "An image of " + gram_t
+                elif simplecaptions and flag and str_s.find(gram) == -1:
+                    str_s += " {}".format(gram)
+                flag = True
                 if cipher:
-                    k = ""
-                    for c in gram:
-                        nextc = cipher_dict.get(c) or c
-                        k = k + nextc
-                    gram_t = k
+                    str_s = str_s.replace(gram, k)
 
-                if ds and gram_t in ds:
-                    if integer_labels and not flag:
-                        str_s = "{}".format(ds.index(gram_t))
-                    elif integer_labels:
-                        idx_insert = ds.index(gram_t)
-                        if str_s.find(str(idx_insert)) == -1:
-                            str_s += ", {}".format(idx_insert)
-                        continue
-                    elif not metacaptions.empty:
-                        idx_insert = ds.index(gram_t)
-                        row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
-                        if not row.empty:
-                            row = row.iloc[0]
-                            for field in [row['functional_classname'], row['subclass'], row['relations_locations'], row['relations_objects'], row['relations_events']]:
-                                if field == "":
-                                    continue
-                                items = field.split(", ")
-                                for item in items:
-                                    if str_s.find(item) == -1:
-                                        str_s = str_s + " " + item
-                    if simplecaptions and not flag:
-                        str_s = "An image of " + gram_t
-                    elif simplecaptions and flag and str_s.find(gram) == -1:
-                        str_s += " {}".format(gram)
-                    flag = True
-                    if cipher:
-                        str_s = str_s.replace(gram, k)
+            elif simplecaptions and not ds:
+                d = wordnet.synsets(gram)
+                if d in stopwords.words('english'):
+                    continue
+                elif d and not flag:
+                    str_s = "An image of " + gram
+                elif d and str_s.find(gram) == -1:
+                    str_s += " {}".format(gram)
+                    
+                flag=True
+    if cipher or simplecaptions or integer_labels:
+        if not flag:
+            str_s = ""
+        return str_s
 
-                elif simplecaptions and not ds:
-                    d = wordnet.synsets(gram)
-                    if d in stopwords.words('english'):
-                        continue
-                    elif d and not flag:
-                        str_s = "An image of " + gram
-                    elif d and str_s.find(gram) == -1:
-                        str_s += " {}".format(gram)
-                        
-                    flag=True
-        if cipher or simplecaptions or integer_labels:
-            if not flag:
-                str_s = ""
-            return str_s
+    elif shift:
+        str_s = shift_cipher(str_s, shift)
+        return str_s
 
-        elif shift:
-            str_s = shift_cipher(str_s, shift)
-            return str_s
-
-        return flag
-        
-    # except Exception as e:
-    #     logging.info("Exception in synset ds: ")
-    #     logging.info(e)
-    #     return ""
+    return flag
 
 def clean_captions(x):
+    import logging
     try:
-        return x.lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "").strip()
+        cleaned = str(x).lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?\n'})\
+        .replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ")\
+        .replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "")\
+        .replace("http", " ").replace("href", " ")\
+        .strip()
+        c_list = list(set(cleaned.split(" ")))
+        c_list = [c for c in c_list if 2 < len(c) < 20]
+        if len(c_list) > 50:
+            c_list = c_list[:49]
+        return " ".join(c_list)
     except Exception as e:
         logging.info("Exception in clean captions: ")
         logging.info(e)
