@@ -57,9 +57,14 @@ singularity \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
-  /scratch/work/public/singularity/rocm5.1.1-ubuntu20.04.4.sif \
+  /scratch/work/public/hudson/images/rocm4.5.2-ubuntu20.04.3.sif \
   /bin/bash
 ```
+
+### Other Rocm
+/scratch/work/public/singularity/rocm5.1.1-ubuntu20.04.4.sif
+
+/scratch/work/public/hudson/images/rocm4.5.2-ubuntu20.04.3.sif
 
 ### GPU FLAGS
 
