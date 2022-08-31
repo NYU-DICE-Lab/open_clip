@@ -57,7 +57,7 @@ singularity \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
-  /scratch/work/public/hudson/images/rocm4.5.2-ubuntu20.04.3.sif \
+  /scratch/work/public/singularity/rocm5.1.1-ubuntu20.04.4.sif \
   /bin/bash
 ```
 
@@ -70,13 +70,13 @@ singularity \
 
 ```bash
 #NO GPU
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin"; unset SLURM_NTASKS;
+source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; unset SLURM_NTASKS;
 
 #ONE GPU
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
+source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";
 
 #MULTI-GPU
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";
 ```
 
 ### DEBUG
