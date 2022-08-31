@@ -109,6 +109,12 @@ def parse_args():
         help="Scramble word ordering of captions during training"
     )
     parser.add_argument(
+        "--token-scrambled",
+        type=bool,
+        default=False,
+        help="Scramble token ordering of captions during training"
+    )
+    parser.add_argument(
         "--zs-upper",
         type=bool,
         default=False,

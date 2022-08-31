@@ -68,7 +68,7 @@ singularity \
 source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin"; unset SLURM_NTASKS;
 
 #ONE GPU
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";
+source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
 
 #MULTI-GPU
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src"; export PYTHONPATH="$PYTHONPATH:/home/bf996/.local/bin";
@@ -231,7 +231,7 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 #### INFERENCE ON PRETRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
+python src/training/main.py --batch-size=32 --workers=1 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
 
 python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=yfcc15m  --precision=fp32
 
@@ -261,15 +261,20 @@ python -u /scratch/bf996/open_clip/src/training/main.py --report-to wandb --data
 
 python src/training/main.py --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{31000..32500}.tar" --train-num-samples 15000000 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=8 --save-frequency 1 --warmup 2000 --batch-size=32 --epochs=32 --workers=4 --model="timm-vit_base_patch16_224_1k" --integer-labels --ds-filter="imagenet_classnames" --pretrained-head="/scratch/bf996/open_clip/logs/laion15m-vit-b-16-simclr-ep7/checkpoints/epoch_7.pt"
 
+#### MLFound Version
+
+python -m training.main \
+    --imagenet-val "/imagenet/val/" \
+    --model ViT-B-32-quickgelu \
+    --pretrained laion400m_e32
+
 #### INFERENCE ON TRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-lit-igresnext-ep1-2/checkpoints/epoch_1.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
-
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-lit-igresnext-ep3/checkpoints/epoch_3.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
+python src/training/main.py --batch-size=32 --workers=1 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-RN50-proper-ep24-32/checkpoints/epoch_32.pt" --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --model=RN50;
 
 --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" 
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-lit-igresnext-ep4-5/checkpoints/epoch_5.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/home/bf996/scratch_greene/open_clip/logs/laion15m-lit-igresnext-ep1-2/checkpoints/epoch_2.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-simplenounadj-ep24-28-redux/checkpoints/epoch_26.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=RN50;
 

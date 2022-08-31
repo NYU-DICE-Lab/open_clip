@@ -157,7 +157,7 @@ def clean_integer_label(label):
         return ""
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         if dscipher:
@@ -186,6 +186,7 @@ class CsvDataset(Dataset):
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
         self.scrambled = csvscrambled
+        self.token_scrambled = tokenscrambled
         self.integer_labels = integer_labels
         logging.debug('Done loading data')
 
@@ -217,6 +218,8 @@ class CsvDataset(Dataset):
         if self.scrambled:
             texts = scramble_txt(texts)
         texts = tokenize(texts)[0]
+        if self.token_scrambled:
+            random.shuffle(texts)
         return images, texts
 
 def _convert_to_rgb(image):
@@ -285,14 +288,12 @@ class DataInfo:
             self.sampler.set_epoch(epoch)
 
 
-def preprocess_txt(text):
-    try:
-        text = str(text)
-        return tokenize([text])[0]
-    except Exception as e:
-        logging.info("Exception in preprocess_txt")
-        logging.info(e)
-        return tokenize(["NONE"])[0]
+def preprocess_txt(text, token_scrambled):
+    text = str(text)
+    tokentxt = tokenize([text])[0]
+    if token_scrambled:
+        random.shuffle(texts)
+    return tokentxt
 
 def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions):
     # logging.info("entering filter preprocess: ")
@@ -855,7 +856,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
         ])
     else:
         pipeline.extend([
-            wds.map_dict(image=preprocess_img, text=preprocess_txt, handler=log_and_continue),
+            wds.map_dict(image=preprocess_img, text=lambda x : preprocess_txt(x, args.token_scrambled), handler=log_and_continue),
         ])
     pipeline.extend([
         wds.to_tuple("image", "text"),
@@ -934,6 +935,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             caption_key=args.csv_caption_key,
             csvfilter=args.ds_filter,
             csvscrambled=args.csv_scrambled,
+            tokenscrambled=args.token_scrambled,
             csvcleaned=args.csv_cleaned,
             dscipher=args.ds_cipher,
             simplecaptions=args.simplecaptions,
