@@ -240,7 +240,6 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imag
 
 python src/training/main.py --batch-size=32 --workers=8 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
 
-
 python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=yfcc15m  --precision=fp32
 
 python src/training/main.py --batch-size=32 --workers=4 --inat2021="/scratch/bf996/datasets/" --zeroshot-frequency=1  --model=RN50  --pretrained=yfcc15m 
@@ -282,7 +281,9 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imag
 
 --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" 
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/home/bf996/scratch_greene/open_clip/logs/laion15m-lit-igresnext-ep1-2/checkpoints/epoch_2.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-lit-igresnext-ep1-2/checkpoints/epoch_2.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-igresnext32x48;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion400m-15mtrain-swin-lit-ul4-ep1-7/checkpoints/epoch_2.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=timm-swin_base_patch4_window7_224;
 
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-simplenounadj-ep24-28-redux/checkpoints/epoch_26.pt" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --zeroshot-frequency=1 --model=RN50;
 

@@ -39,7 +39,7 @@ for k,v in imagenet_our_classnames.items():
     temp.append("".join(v))
 imagenet_our_classnames = temp
 def get_imagenet_our_classnames():
-    return retlist
+    return imagenet_our_classnames
 
 ir_idx = [1, 2, 4, 6, 8, 9, 11, 13, 22, 23, 26, 29, 31, 39, 47, 63, 71, 76, 79, 84, 90, 94, 96, 97, 99, 100, 105, 107, 113, 122, 
 125, 130, 132, 144, 145, 147, 148, 150, 151, 155, 160, 161, 162, 163, 171, 172, 178, 187, 195, 199, 203, 207, 208, 219, 
