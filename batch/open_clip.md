@@ -236,7 +236,10 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 #### INFERENCE ON PRETRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=1 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=openai --caption-subset=True
+
+python src/training/main.py --batch-size=32 --workers=8 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
+
 
 python src/training/main.py --batch-size=32 --workers=4 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=yfcc15m  --precision=fp32
 
@@ -275,7 +278,7 @@ python -m training.main \
 
 #### INFERENCE ON TRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=1 --report-to wandb --resume "/scratch/bf996/open_clip/logs/laion15m-RN50-proper-ep24-32/checkpoints/epoch_32.pt" --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --model=RN50;
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --resume "/scratch/bf996/open_clip/logs/laion15m-RN50-proper-ep24-32/checkpoints/epoch_32.pt" --caption-subset=True
 
 --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --air "/" --stanfordcars "/" --food "/" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" 
 

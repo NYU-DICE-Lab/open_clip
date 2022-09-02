@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=384GB
+#SBATCH --mem=128GB
 #SBATCH --gres=gpu:4
 #SBATCH --job-name=in100-titletagdescr-integerlabels
 #SBATCH --mail-type=BEGIN,END

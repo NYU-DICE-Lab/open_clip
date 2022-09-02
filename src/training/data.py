@@ -204,7 +204,8 @@ class CsvDataset(Dataset):
             logging.warning("Missing or unreadable image at {}, attempting to skip.".format(str(self.images[idx])))
             try:
                 images = self.transforms(Image.open(str(self.images[idx+1])))
-                texts = self.captions[idx+1]
+                torch.nan_to_num(images, nan=0.01, posinf=0.99, neginf=0.01)
+                texts = str(self.captions[idx+1])
             except:
                 logging.warning("Skip failed. Generating dummy image and caption.".format(str(self.images[idx])))
                 imarray = np.random.rand(224,224,3) * 255
