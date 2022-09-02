@@ -59,9 +59,18 @@ def show_matrix(args, mat, title):
 #              curr_row += 1
 
 def log_confusion_matrix(args, output, labels):
-    output = (torch.max(torch.exp(output), 1)[1]).data.cpu().numpy()
-    args.y_pred.extend(output) # Save Prediction
+    # print("output before")
+    # print(output)
+    # print(output.size())
+    output = output.topk(max((1, 5)), 1, True, True)
+    # print("output after topk")
+    output = output[1].t()[0].data.cpu().numpy()   
+    #output = (torch.max(torch.exp(output), 1)[1]).data.cpu().numpy()
     labels = labels.data.cpu().numpy()
+    # print("output after, labels")
+    # print(output)
+    # print(labels)
+    args.y_pred.extend(output) # Save Prediction
     args.y_true.extend(labels) # Save Truth
 
 def write_confusion_matrix(args, output, labels, classes):
