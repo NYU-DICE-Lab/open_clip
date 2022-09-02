@@ -67,14 +67,19 @@ def log_confusion_matrix(args, output, labels):
 def write_confusion_matrix(args, output, labels, classes):
     #confusion matrix
     cf_matrix = confusion_matrix(args.y_true, args.y_pred)
-    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) *10, index = [i for i in classes],
+    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) * 10, index = [i for i in classes],
                         columns = [i for i in classes])
+    df_cm = df_cm.div(df_cm.sum(axis=1), axis=0)
     args.conf_path = os.path.join(args.log_base_path, "confusion_matrix")
     if not os.path.exists(args.conf_path):
         os.mkdir(args.conf_path)
     res = str(datetime.now())[:19]
     res = res.translate({ord(":"): "-", ord(" "):"_"})
-    df_cm.to_csv(os.path.join(args.conf_path, "confusion_matrix_{}.csv".format(res)))
+    df_cm.to_csv(os.path.join(args.conf_path, "confusion_matrix_{}.csv".format(res)), index=False)
+    per_class_acc = pd.Series(np.diag(df_cm), index=[df_cm.index, df_cm.columns])
+    per_class_acc = pd.DataFrame(per_class_acc).transpose()
+    per_class_acc.columns = [''.join(col[1:]) for idx, col in enumerate(per_class_acc.columns.values)]
+    per_class_acc.to_csv(os.path.join(args.conf_path, "per_class_acc_{}.csv".format(res)), index=False)
     plt.figure(figsize = (72,42), dpi=200)
     sn.heatmap(df_cm, annot=True)
     plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=200)
