@@ -115,6 +115,12 @@ def parse_args():
         help="Scramble token ordering of captions during training"
     )
     parser.add_argument(
+        "--extended-metrics",
+        type=bool,
+        default=False,
+        help="Confusion matrices and class-wise accuracy"
+    )
+    parser.add_argument(
         "--zs-upper",
         type=bool,
         default=False,

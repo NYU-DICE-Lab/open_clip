@@ -64,18 +64,26 @@ def log_confusion_matrix(args, output, labels):
     # print(output.size())
     output = output.topk(max((1, 5)), 1, True, True)
     # print("output after topk")
-    output = output[1].t()[0].data.cpu().numpy()   
+    output = output[1].t()[0].data.cpu()
+    output = np.array(output, ndmin=1)  
     #output = (torch.max(torch.exp(output), 1)[1]).data.cpu().numpy()
-    labels = labels.data.cpu().numpy()
+    labels = labels.data.cpu()
+    labels = np.array(labels, ndmin=1)
+    # if isinstance(labels, int):
+    #     labels = [labels]
     # print("output after, labels")
-    # print(output)
-    # print(labels)
+    #print(output, output.shape)
+    #print(labels, labels.shape)
+    # assert len(labels) == len(output)
     args.y_pred.extend(output) # Save Prediction
     args.y_true.extend(labels) # Save Truth
 
 def write_confusion_matrix(args, output, labels, classes):
     #confusion matrix
     cf_matrix = confusion_matrix(args.y_true, args.y_pred)
+    if len(cf_matrix) != len(classes):
+        classes = np.array(classes)
+        classes = classes[np.unique(args.y_pred + args.y_true).tolist()].tolist()
     df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) * 10, index = [i for i in classes],
                         columns = [i for i in classes])
     df_cm = df_cm.div(df_cm.sum(axis=1), axis=0)
@@ -84,17 +92,26 @@ def write_confusion_matrix(args, output, labels, classes):
         os.mkdir(args.conf_path)
     res = str(datetime.now())[:19]
     res = res.translate({ord(":"): "-", ord(" "):"_"})
+    logging.info('Writing confusion matrix')
     df_cm.to_csv(os.path.join(args.conf_path, "confusion_matrix_{}.csv".format(res)), index=False)
     per_class_acc = pd.Series(np.diag(df_cm), index=[df_cm.index, df_cm.columns])
     per_class_acc = pd.DataFrame(per_class_acc).transpose()
     per_class_acc.columns = [''.join(col[1:]) for idx, col in enumerate(per_class_acc.columns.values)]
     per_class_acc.to_csv(os.path.join(args.conf_path, "per_class_acc_{}.csv".format(res)), index=False)
-    plt.figure(figsize = (72,42), dpi=200)
-    sn.heatmap(df_cm, annot=True)
-    plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=200)
-    logit_concat = np.concatenate(args.logits, axis=0)
+    font_size = round(1 * 100//len(classes), 2)
+    sns.set(font_scale=font_size)
+    if len(classes) < 201:
+        plt.figure(figsize = (72,40), dpi=200)
+        sn.heatmap(df_cm, annot=True)
+        plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.svg".format(res)), format='svg', dpi=200)
+    else:
+        plt.figure(figsize = (72,40), dpi=200)
+        sn.heatmap(df_cm, annot=True)
+        plt.savefig(os.path.join(args.conf_path, "confusion_matrix_{}.jpg".format(res)), format='jpg', dpi=200)        
     plt.close('all')
     #class-class clustering matrix
+    logging.info('Saving class-class clustering matrix')
+    logit_concat = np.concatenate(args.logits, axis=0)
     corr_mat_logits = np.corrcoef(logit_concat, rowvar=False)
     corr_mat_logits[corr_mat_logits < 0] = 0 # not quite necessary, but helps sharpen the blocks
     corr_mat_logits, indices_logits = reorder_matrix(corr_mat_logits)

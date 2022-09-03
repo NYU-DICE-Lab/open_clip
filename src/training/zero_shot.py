@@ -183,7 +183,8 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
                         logits = 100. * image_features @ classifier
             # measure accuracy
             args.logits.append(logits.cpu().detach().numpy())
-            log_confusion_matrix(args, logits, target)
+            if args.extended_metrics:
+                log_confusion_matrix(args, logits, target)
             acc1, acc5 = accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
@@ -192,7 +193,7 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
     top1 = (top1 / n)
     top5 = (top5 / n)
     #TODO: debug integer labels
-    if not args.integer_labels:
+    if args.extended_metrics:
         write_confusion_matrix(args, logits, target, args.classnames)
     return top1, top5
 
@@ -203,13 +204,19 @@ def to_lower(l):
     return [c.lower() for c in l]
 
 def build_imagenet(args, model, in_type=""):
+    isint = (args.integer_labels or args.linear_probe)
+    usecaps = args.caption_subset and not isint
+    if isint:
+        args.classnames = get_imagenet_classnames()
+        classifier = None
+        return classifier
     template = get_openai_imagenet_template()
     if args.no_ensembling:
         template = [template[0]]
     if in_type == "r":
         if args.ds_cipher:
             classnames = get_imagenet_r_cipher()
-        elif args.caption_subset:
+        elif usecaps:
             if bool(args.pretrained):
                 classnames = get_imagenet_common_ir_classnames()
             else:
@@ -221,7 +228,7 @@ def build_imagenet(args, model, in_type=""):
     elif in_type == "a":
         if args.ds_cipher:
             classnames = get_imagenet_a_cipher()
-        elif args.caption_subset:
+        elif usecaps:
             if bool(args.pretrained):
                 classnames = get_imagenet_common_ia_classnames()
             else:
@@ -233,7 +240,7 @@ def build_imagenet(args, model, in_type=""):
     else:
         if args.ds_cipher:
             classnames = get_imagenet_cipher()
-        elif args.caption_subset:
+        elif usecaps:
             if bool(args.pretrained):
                 classnames = get_imagenet_cap_classnames()
             else:
@@ -252,7 +259,9 @@ def build_imagenet(args, model, in_type=""):
         classnames = [shift_cipher(s, args.shift_cipher) for s in classnames]
     #logging.info("imagenet classnames first 15: {}".format(classnames[:15]))
     args.classnames = classnames
-    classifier = zero_shot_classifier(model, classnames, template, args)
+    if not isint:
+        logging.info('Building zero-shot classifier')
+        classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 
 def zero_shot_eval(model, data, epoch, args):
@@ -355,8 +364,7 @@ def zero_shot_eval(model, data, epoch, args):
     classifier = None
     imagenets = []
     if 'imagenet-val' in data:            
-        if classifier is None and not isint:
-            logging.info('Building zero-shot classifier')
+        if classifier is None:
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenet-zeroshot-val-top1'] = top1
@@ -364,8 +372,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenet-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot val. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-v2' in data:
-        if classifier is None and not isint:
-            logging.info('Building zero-shot classifier')
+        if classifier is None:
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenetv2-zeroshot-val-top1'] = top1
@@ -373,8 +380,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenetv2-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot v2. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-s' in data:
-        if classifier is None and not isint:
-            logging.info('Building zero-shot classifier')
+        if classifier is None:
             classifier = build_imagenet(args, model)
         top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args, get_icap_idx() if args.caption_subset else None)
         results['imagenets-zeroshot-val-top1'] = top1
@@ -382,9 +388,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenets-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot sketch. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-r' in data:
-        if not isint:
-            logging.info('Building zero-shot classifier for r')
-            classifier = build_imagenet(args, model, "r")
+        classifier = build_imagenet(args, model, "r")
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-r'].dataloader, args, get_common_ir_idx() if args.caption_subset else get_ir_idx(), "r")
         else:
@@ -394,9 +398,7 @@ def zero_shot_eval(model, data, epoch, args):
         results['imagenetr-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-r. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-a' in data:
-        if not isint:
-            logging.info('Building zero-shot classifier for a')
-            classifier = build_imagenet(args, model, "a")
+        classifier = build_imagenet(args, model, "a")
         if isint:
             top1, top5 = run(model, classifier, data['imagenet-a'].dataloader, args, get_common_ia_idx() if args.caption_subset else get_ia_idx(), "a")
         else:
