@@ -99,6 +99,8 @@ def write_confusion_matrix(args, output, labels, classes):
     per_class_acc.columns = [''.join(col[1:]) for idx, col in enumerate(per_class_acc.columns.values)]
     per_class_acc.to_csv(os.path.join(args.conf_path, "per_class_acc_{}.csv".format(res)), index=False)
     font_size = round(1 * 100//len(classes), 2)
+    if font_size < 0.1:
+        font_size = 0.1
     sn.set(font_scale=font_size)
     if len(classes) < 201:
         plt.figure(figsize = (72,40), dpi=200)

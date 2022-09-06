@@ -126,12 +126,15 @@ def select_count(data, predicate, count):
             count = count + 1
             yield sample
 
-def clean_integer_label(label):
-    if isinstance(label, int):
+def clean_integer_label(label, singleclass, strict):
+    if isinstance(label, int) and singleclass:
         if label < 0 or label > 1000:
             print("Integer label out of acceptable range, mapping to 0")
             label = 0
         return torch.tensor(label)
+    elif isinstance(label, int) and not singleclass:
+        label_l = [label] + [-1 for i in range(24)]
+        return torch.tensor(label_l)
     elif isinstance(label, str) and label == "":
         return ""
     elif isinstance(label, str):
@@ -151,15 +154,23 @@ def clean_integer_label(label):
             label = label[:25]
         if len(label) != 25:
             logging.warning("Integer label {} has length {}".format(label, len(label)))
+        if singleclass:
+            label = int(label[0])
+        elif strict:
+            if label[1] == -1:
+                label = int(label[0])
+            else:
+                return ""
         return torch.tensor(label)
     else:
         logging.warning("Expected single or multi integer label, got {} -- ignoring")
         return ""
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
+        logging.debug("Columns of dataframe: {}".format(df.columns))
         if dscipher:
             csvcleaned=True
         if csvcleaned:
@@ -186,8 +197,11 @@ class CsvDataset(Dataset):
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
         self.scrambled = csvscrambled
+        self.csvfilter = csvfilter
         self.token_scrambled = tokenscrambled
         self.integer_labels = integer_labels
+        self.multiclass = multiclass
+        self.strict = strict
         logging.debug('Done loading data')
 
     def __len__(self):
@@ -214,7 +228,10 @@ class CsvDataset(Dataset):
                     )
                 texts = "NONE"
         if self.integer_labels:
-            texts = clean_integer_label(self.captions[idx])
+            #if isinstance(texts, str) and not texts.is_numeric():
+                #assert(False, "Integer labels cannot be computed on the fly for a CSV dataset")
+                #texts = [synset_ds(clean_captions(str(texts)), 3, self.csvfilter, False, False, self.strict, False, True, None) for t in texts]
+            texts = clean_integer_label(self.captions[idx], not self.multiclass, self.strict)
             return images, texts
         if self.scrambled:
             texts = scramble_txt(texts)
@@ -228,7 +245,7 @@ def _convert_to_rgb(image):
     
 class ImageAugCSVDataset(CsvDataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
-        super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, sep)
+        super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep)
         self.augment = torchvision.transforms.Compose([
             torchvision.transforms.RandomResizedCrop(224, scale=(0.08, 1.)),
             torchvision.transforms.RandomApply([
@@ -296,15 +313,13 @@ def preprocess_txt(text, token_scrambled):
         random.shuffle(texts)
     return tokentxt
 
-def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions):
-    # logging.info("entering filter preprocess: ")
-    # logging.info(text)
+def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions):
     if bool(ds):
         if integer_labels:
             text = clean_captions(str(text))
             text = synset_ds(text, 3, ds, False, False, strict, False, integer_labels, metacaptions)
             if text:
-                text = clean_integer_label(text)
+                text = clean_integer_label(text, not multiclass, strict)
             else:
                 text = ""
         else:
@@ -318,8 +333,6 @@ def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict,
             text = ""
     if scrambled:
         text = scramble_txt(text)
-    # logging.info("leaving filter preprocess: ")
-    # logging.info(text)
     return text
 
 def scramble_txt(text):
@@ -848,7 +861,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
     #     ])
     if any([args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.metacaptions]):
         pipeline.extend([
-            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.metacaptions), handler=log_and_continue),
+            wds.map_dict(text=lambda x : filter_preprocess_txt(x, args.ds_filter, args.csv_scrambled, args.ds_cipher, args.simplecaptions, args.strict, args.shift_cipher, args.integer_labels, args.multiclass, args.metacaptions), handler=log_and_continue),
             wds.select(filter_no_caption_text),
         ])
     if args.integer_labels:
@@ -943,6 +956,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             strict=args.strict,
             shift=args.shift_cipher,
             integer_labels=args.integer_labels,
+            multiclass=args.multiclass,
             metacaptions=args.metacaptions,
             sep=args.csv_separator)
     num_samples = len(dataset)
@@ -993,6 +1007,8 @@ def get_data(args, preprocess_fns, epoch=0):
             args.ds_filter = get_imagenet_classnames()
         elif args.ds_filter == "imagenet_captions_classnames":
             args.ds_filter = get_imagenet_captions_classnames()
+        elif args.ds_filter == "imagenet_our_classnames":
+            args.ds_filter = get_imagenet_our_classnames()
         else:
             var_names = globals()
             args.ds_filter = var_names[args.ds_filter]

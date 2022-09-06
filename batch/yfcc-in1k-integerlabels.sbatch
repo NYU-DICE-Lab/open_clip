@@ -26,4 +26,4 @@ export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_strict_new_2272309.csv" --csv-separator "," --integer-labels  --csv-caption-key="in1k_subset_strict" --save-frequency 4 --warmup 2000 --batch-size=128 --precision=fp32 --epochs=64 --workers=8 --model=RN50-in1k --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --train-data="/scratch/bf996/open_clip/yfcc-subsets/yfcc_in1k_strict_new_2272309.csv" --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --csv-separator "," --integer-labels  --csv-caption-key="in1k_subset_strict" --save-frequency 4 --warmup 2000 --batch-size=128 --precision=fp32 --epochs=64 --workers=8 --model=RN50-in1k --local-loss --gather-with-grad'

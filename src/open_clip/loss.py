@@ -216,20 +216,23 @@ class IntLoss(nn.Module):
             logits = logits[local_range]
             labels = labels[local_range]
         loss = 0
+        lablen = 0
         try:
-            lablen = len(labels[0])
-        except:
-            lablen = 0
+            for l in labels:
+                # logging.info(l)
+                if len(l) > lablen:
+                    lablen = len(l)
+        except Exception as e:
+            #logging.warning(e)
+            pass
         if lablen > 1:
+            #logging.info("Entering multiclass, length {}".format(lablen))
             for idx, label in enumerate(labels):
-                if label[1] != -1 and self.args.strict:
-                    continue
                 for tag in label:
                     if tag == -1:
                         break
-                    else:
-                        pred = logits[idx]
-                        loss = loss + F.cross_entropy(pred, tag)
+                    pred = logits[idx]
+                    loss = loss + F.cross_entropy(pred, tag)
         else:
             loss = F.cross_entropy(logits, labels)
         return loss

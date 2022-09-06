@@ -66,6 +66,19 @@ singularity \
 /scratch/work/public/singularity/rocm5.2.0-ubuntu20.04.4.sif
 /scratch/work/public/hudson/images/rocm4.5.2-ubuntu20.04.3.sif
 
+### itorch
+
+singularity exec --nv \
+  $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
+  --overlay /scratch/bf996/interactive_torch/itorch.ext3:rw \
+  --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
+  --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
+  --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
+  /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
+  /bin/bash
+
 ### GPU FLAGS
 
 ```bash
@@ -474,3 +487,11 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imag
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50-in1k  --resume "/scratch/bf996/open_clip/logs/laion100m-15mtrain-in1k-filter-RN50-ep30-32/checkpoints/epoch_32.pt" --integer-labels --caption-subset=True;
 
 python src/training/main.py --batch-size=32 --workers=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50-in1k  --resume "/scratch/bf996/open_clip/logs/laion100m-15mtrain-in1k-filter-RN50-ep30-32/checkpoints/epoch_32.pt" --integer-labels --caption-subset=True --extended-metrics=True;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-ep1-64/checkpoints/epoch_64.pt" --caption-subset=True --extended-metrics=True;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/in100+yfcc100-multi-titletagdescr-ep1-256/checkpoints/epoch_172.pt" --caption-subset=True;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-new-ep1-63/checkpoints/epoch_60.pt" --caption-subset=True;
+
+python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50-in1k  --resume "/scratch/bf996/open_clip/logs/laion15m-RN50-in1k-integerlabels-singleclass-ep20-32/checkpoints/epoch_32.pt" --integer-labels --caption-subset=True; python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/laion15m-in1k-filter-ep17-32/checkpoints/epoch_32.pt" --caption-subset=True;
