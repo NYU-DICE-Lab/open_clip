@@ -409,8 +409,6 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
             if ds:
                 for idx, val in enumerate(ds_values.values()):
                     if gram_t in val:
-                        print("MATCH")
-                        print(gram_t, idx, ds[idx])
                         if integer_labels and not flag:
                             str_s = "{}".format(idx)
                         elif integer_labels:
