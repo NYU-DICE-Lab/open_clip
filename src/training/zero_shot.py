@@ -181,11 +181,23 @@ def run(model, classifier, dataloader, args, idx=None, split=None):
                         image_features = model.encode_image(images)
                         image_features = F.normalize(image_features, dim=-1)
                         logits = 100. * image_features @ classifier
-            # measure accuracy
-            args.logits.append(logits.cpu().detach().numpy())
-            if args.extended_metrics:
-                log_confusion_matrix(args, logits, target)
-            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+            
+            # measure accuracy with objectnet adjustments
+            if split == "objectnet" and args.integer_labels:
+                with open("./metadata/imagenet_to_objectnet.json","r") as f:
+                    mapping = json.load(f)
+                    # convert string keys to ints
+                    mapping = {int(k): v for k, v in mapping.items()}
+                pred = output.topk(max(topk), 1, True, True)[1].t()
+                pred = torch.tensor(imageNetIDToObjectNetID[pred.cpu().tolist()]).to(args.device)
+                #deal with the -1 wrong predictions, if need be
+                correct = pred.eq(target.view(1, -1).expand_as(pred))
+                acc1, acc5 = [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]          
+            else:
+                args.logits.append(logits.cpu().detach().numpy())
+                if args.extended_metrics:
+                    log_confusion_matrix(args, logits, target)
+                acc1, acc5 = accuracy(logits, target, topk=(1, 5))
             top1 += acc1
             top5 += acc5
             n += images.size(0)
@@ -264,13 +276,20 @@ def build_imagenet(args, model, in_type=""):
         classifier = zero_shot_classifier(model, classnames, template, args)
     return classifier
 
+def imageNetIDToObjectNetID(prediction_class):
+    for i in range(len(prediction_class)):
+        if prediction_class[i] in mapping:
+            prediction_class[i] = mapping[prediction_class[i]]
+        else:
+            prediction_class[i] = -1
+
 def zero_shot_eval(model, data, epoch, args):
     #logging.debug(data)
     
     results = {}
     classifier = None
 
-    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data and 'inat2021' not in data and 'stanfordcars' not in data and 'flowers' not in data and 'food' not in data:
+    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data and 'inat2021' not in data and 'stanfordcars' not in data and 'flowers' not in data and 'food' not in data and 'objectnet' not in data:
         return results
     if args.zeroshot_frequency == 0:
         return results
@@ -407,6 +426,13 @@ def zero_shot_eval(model, data, epoch, args):
         imagenets.append(top1)
         results['imageneta-zeroshot-val-top5'] = top5
         logging.info('Finished zero-shot imagenet-a. Top1 was {}, top5 was {}'.format(top1, top5))
+    if 'objectnet' in data:
+        obj_classnames = ast.literal_eval(open("./metadata/objectnet_folder_to_label.txt", 'r').read())
+        obj_classnames = obj_classnames.values()
+        classifier = zero_shot_classifier(model, obj_classnames, openai_imagenet_template, args)
+        top1, top5 = run(model, classifier, data['objectnet'].dataloader, args, None, "objectnet")
+        results['objectnet-top1'] = top1
+        results['objectnet-top5'] = top5        
     if results.get('imagenet-zeroshot-val-top1'):
         logging.info("computing effective robustness on imagenet")
         logging.info("len imagenets {}".format(len(imagenets)))

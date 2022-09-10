@@ -16,15 +16,15 @@ def get_imagenet_classnames():
 
 try:
     IN1K_ORDER = Path("./metadata/imagenet1k_wrongorder.txt")
-    with open( IN1K_OPENAI, 'r' ) as file:
-        imagenet_captions_classnames = ast.literal_eval( file.read( ) )
+    with open( IN1K_ORDER, 'r' ) as file:
+        imagenet_wrongorder_classnames = ast.literal_eval( file.read( ) )
 except:
-    IN1K_OPENAI = Path("open_clip/metadata/imagenet1k_wrongorder.txt")
-    with open( IN1K_OPENAI, 'r' ) as file:
-        imagenet_captions_classnames = ast.literal_eval( file.read( ) )
+    IN1K_ORDER = Path("open_clip/metadata/imagenet1k_wrongorder.txt")
+    with open( IN1K_ORDER, 'r' ) as file:
+        imagenet_wrongorder_classnames = ast.literal_eval( file.read( ) )
 
-def get_imagenet_captions_classnames():
-    return imagenet_captions_classnames
+def get_imagenet_wrongorder_classnames():
+    return imagenet_wrongorder_classnames
 
 try:
     IN1K_OURS = Path("./metadata/imagenet1k_ours.txt")
@@ -35,11 +35,30 @@ except:
     with open( IN1K_OURS, 'r' ) as file:
         imagenet_our_classnames = ast.literal_eval( file.read( ) )
 temp = []
+
 for k,v in imagenet_our_classnames.items():
     temp.append("".join(v))
 imagenet_our_classnames = temp
+
 def get_imagenet_our_classnames():
     return imagenet_our_classnames
+
+try:
+    IN1K_DEF = Path("./metadata/imagenet1k_default.txt")
+    with open( IN1K_DEF, 'r' ) as file:
+        imagenet_def_classnames = ast.literal_eval( file.read( ) )
+except:
+    IN1K_DEF = Path("open_clip/metadata/imagenet1k_default.txt")
+    with open( IN1K_DEF, 'r' ) as file:
+        imagenet_def_classnames = ast.literal_eval( file.read( ) )
+temp = []
+
+for k,v in imagenet_def_classnames.items():
+    temp.append("".join(v))
+imagenet_def_classnames = temp
+
+def get_imagenet_def_classnames():
+    return imagenet_def_classnames
 
 ir_idx = [1, 2, 4, 6, 8, 9, 11, 13, 22, 23, 26, 29, 31, 39, 47, 63, 71, 76, 79, 84, 90, 94, 96, 97, 99, 100, 105, 107, 113, 122, 
 125, 130, 132, 144, 145, 147, 148, 150, 151, 155, 160, 161, 162, 163, 171, 172, 178, 187, 195, 199, 203, 207, 208, 219, 

@@ -127,20 +127,29 @@ def select_count(data, predicate, count):
             yield sample
 
 def clean_integer_label(label, singleclass, strict):
-    if isinstance(label, int) and singleclass:
-        if label < 0 or label > 1000:
-            print("Integer label out of acceptable range, mapping to 0")
+    if isinstance(label, int):
+        if label < 0 or label > 999:
+            logging.info("Integer label out of acceptable range, mapping to 0")
             label = 0
-        return torch.tensor(label)
-    elif isinstance(label, int) and not singleclass:
-        label_l = [label] + [-1 for i in range(24)]
-        return torch.tensor(label_l)
+        if singleclass:
+            return torch.tensor(label)
+        else:
+            label_l = [label] + [-1 for i in range(24)]
+            return torch.tensor(label_l)
     elif isinstance(label, str) and label == "":
         return ""
     elif isinstance(label, str):
         label = label.split(", ")
         try:
-            label = [int(l) for l in label]
+            label_updated = []
+            for l in label:
+                intl = int(l)
+                if intl < 0 or intl > 999:
+                    logging.info("Integer label out of acceptable range, mapping to 0")
+                    label_updated.append(0)
+                else:
+                    label_updated.append(intl)
+            label = label_updated
         except Exception as e:
             logging.warning("Error converting string to integer list, {}".format(e))
             return ""
@@ -237,7 +246,9 @@ class CsvDataset(Dataset):
             texts = scramble_txt(texts)
         texts = tokenize(texts)[0]
         if self.token_scrambled:
+            #logging.info("before: {}".format(texts))
             random.shuffle(texts)
+            #logging.info("after: {}".format(texts))
         return images, texts
 
 def _convert_to_rgb(image):
@@ -310,7 +321,7 @@ def preprocess_txt(text, token_scrambled):
     text = str(text)
     tokentxt = tokenize([text])[0]
     if token_scrambled:
-        random.shuffle(texts)
+        random.shuffle(tokentxt)
     return tokentxt
 
 def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions):
@@ -369,38 +380,31 @@ WARNING: can return string or bool, depending on arguments provided
 def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=False, shift=None, integer_labels=False, metacaptions=None):
     flag = False
     s = list(lemmatizer.lemmatize(t) for t in s.split(" "))
-    #s = [lemmatizer.lemmatize(t) for t in s.split(" ") if t]
-    if len(s) > 76:
-        s = s[:75]
     str_s = " ".join(w for w in s)
-    if ds:
-        ds = [t.lower().strip() for t in ds] + [t.lower().strip()+"s" for t in ds]
-    for count, word in enumerate(s):
+    #OR: s = str(s)
 
+    if ds:
+        ds = [t.lower().strip() for t in ds] 
+        #ds_plural = [t.lower().strip()+"s" for t in ds]
+    for count, word in enumerate(s):
         if strict and flag:
             break
         grams = []
-
         for i in range(ngram):
             if count + i - 1 > len(s):
                 continue
-            gram = " ".join(w for w in s[count:count+i+1] if len(w) > 2)
+            gram = " ".join(w for w in s[count:count+i+1])
             grams.append(gram)
-
         for i, gram in enumerate(grams):
-
             if strict and flag:
                 break
-
             gram_t = gram
-
             if cipher:
                 k = ""
                 for c in gram:
                     nextc = cipher_dict.get(c) or c
                     k = k + nextc
                 gram_t = k
-
             if ds and gram_t in ds:
                 if integer_labels and not flag:
                     str_s = "{}".format(ds.index(gram_t))
@@ -410,7 +414,7 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                         str_s += ", {}".format(idx_insert)
                     continue
                 elif not metacaptions.empty:
-                    idx_insert = ds.index(gram_t)
+                    idx_insert = test_ds.index(gram_t)
                     row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
                     if not row.empty:
                         row = row.iloc[0]
@@ -436,9 +440,12 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                 elif d and not flag:
                     str_s = "An image of " + gram
                 elif d and str_s.find(gram) == -1:
-                    str_s += " {}".format(gram)
-                    
+                    str_s += " {}".format(gram)         
                 flag=True
+    
+    if len(str_s) > 76:
+        str_s = str_s[:75]
+    
     if cipher or simplecaptions or integer_labels:
         if not flag:
             str_s = ""
@@ -454,12 +461,12 @@ def clean_captions(x):
     import logging
     try:
         cleaned = str(x).lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?\n'})\
-        .replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ")\
-        .replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "")\
+        .replace(" www ", " ").replace(" com ", " ")\
+        .replace(" flickr ", " ").replace(" st ", " street ").replace(" de ", "")\
         .replace("http", " ").replace("href", " ")\
         .strip()
-        c_list = list(set(cleaned.split(" ")))
-        c_list = [c for c in c_list if 2 < len(c) < 20]
+        c_list = list(cleaned.split(" "))
+        c_list = [c for c in c_list if (len(c) < 30 and not c.isnumeric())]
         if len(c_list) > 50:
             c_list = c_list[:49]
         return " ".join(c_list)
@@ -489,6 +496,17 @@ def get_dataset_size(shards):
     num_shards = len(shards_list)
     return total_size, num_shards
 
+def get_objectnet(args, preprocess_fns):
+    preprocess_train, preprocess_val = preprocess_fns
+    dataset = datasets.ImageFolder(args.objectnet, transform=preprocess_fn)
+    dataloader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+            sampler=sampler
+        )
+    return DataInfo(dataloader=dataloader, sampler=sampler)
+    
 def get_imagenet(args, preprocess_fns, split):
     assert split in ["train", "val", "v2", "r", "a", "s"], "Not a recognized ImageNet split, {}".format(split)
     is_train = (split == "train")
@@ -1005,10 +1023,12 @@ def get_data(args, preprocess_fns, epoch=0):
     elif args.ds_filter != "":
         if args.ds_filter == "imagenet_classnames":
             args.ds_filter = get_imagenet_classnames()
-        elif args.ds_filter == "imagenet_captions_classnames":
-            args.ds_filter = get_imagenet_captions_classnames()
+        elif args.ds_filter == "imagenet_wrongorder_classnames":
+            args.ds_filter = get_imagenet_wrongorder_classnames()
         elif args.ds_filter == "imagenet_our_classnames":
             args.ds_filter = get_imagenet_our_classnames()
+        elif args.ds_filter == "imagenet_def_classnames":
+            args.ds_filter = get_imagenet_def_classnames()
         else:
             var_names = globals()
             args.ds_filter = var_names[args.ds_filter]
@@ -1047,7 +1067,10 @@ def get_data(args, preprocess_fns, epoch=0):
         data["imagenet-s"] = get_imagenet(args, preprocess_fns, "s")   
     
     if args.imagenet_a is not None:
-        data["imagenet-a"] = get_imagenet(args, preprocess_fns, "a")   
+        data["imagenet-a"] = get_imagenet(args, preprocess_fns, "a")
+
+    if args.objectnet is not None:
+        data["objectnet"] = get_objectnet(args, preprocess_fns)   
 
     if args.inat2021 is not None:
         data["inat2021"] = get_torchvision(args, preprocess_fns, "inat2021")

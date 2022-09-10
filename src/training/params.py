@@ -157,6 +157,12 @@ def parse_args():
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--objectnet",
+        type=str,
+        default=None,
+        help="Path to objectnet for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
         "--imagenet-s",
         type=str,
         default=None,

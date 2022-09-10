@@ -128,6 +128,14 @@ VRAM may be anywhere from 16GB to 40GB, depending on which cards you request or 
 --train-num-samples 400000000 \
 ```
 
+### LAION2B
+
+```
+--dataset-type webdataset \
+--train-data "/vast/work/public/ml-datasets/laion2B-en-data/{000000..231569}.tar" \
+--train-num-samples 2000000000 \
+```
+
 ### YFCC15M
 
 ```bash
