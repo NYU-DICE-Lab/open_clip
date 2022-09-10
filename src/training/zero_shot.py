@@ -428,7 +428,7 @@ def zero_shot_eval(model, data, epoch, args):
         logging.info('Finished zero-shot imagenet-a. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'objectnet' in data:
         obj_classnames = ast.literal_eval(open("./metadata/objectnet_folder_to_label.txt", 'r').read())
-        obj_classnames = obj_classnames.values()
+        obj_classnames = sorted(obj_classnames.values())
         classifier = zero_shot_classifier(model, obj_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['objectnet'].dataloader, args, None, "objectnet")
         results['objectnet-top1'] = top1

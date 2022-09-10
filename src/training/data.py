@@ -382,10 +382,11 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
     s = list(lemmatizer.lemmatize(t) for t in s.split(" "))
     str_s = " ".join(w for w in s)
     #OR: s = str(s)
-
     if ds:
-        ds = [t.lower().strip() for t in ds] 
-        #ds_plural = [t.lower().strip()+"s" for t in ds]
+        if isinstance(ds, dict):
+            ds_values = {idx:list(set([t.lower().strip() for t in row.split(", ")] + [t.lower().strip()+"s" for t in row.split(", ")] + [t.lower().strip().replace(" ", "") for t in row.split(", ")])) for idx, row in enumerate(ds.values())}
+        else:
+            ds_values = {idx:list(set([ds[idx].lower(), ds[idx].lower()+"s", ds[idx].lower().replace(" ", "")])) for idx in range(len(ds))}
     for count, word in enumerate(s):
         if strict and flag:
             break
@@ -405,33 +406,37 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
                     nextc = cipher_dict.get(c) or c
                     k = k + nextc
                 gram_t = k
-            if ds and gram_t in ds:
-                if integer_labels and not flag:
-                    str_s = "{}".format(ds.index(gram_t))
-                elif integer_labels:
-                    idx_insert = ds.index(gram_t)
-                    if str_s.find(str(idx_insert)) == -1:
-                        str_s += ", {}".format(idx_insert)
-                    continue
-                elif not metacaptions.empty:
-                    idx_insert = test_ds.index(gram_t)
-                    row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
-                    if not row.empty:
-                        row = row.iloc[0]
-                        for field in [row['functional_classname'], row['subclass'], row['relations_locations'], row['relations_objects'], row['relations_events']]:
-                            if field == "":
-                                continue
-                            items = field.split(", ")
-                            for item in items:
-                                if str_s.find(item) == -1:
-                                    str_s = str_s + " " + item
-                if simplecaptions and not flag:
-                    str_s = "An image of " + gram_t
-                elif simplecaptions and flag and str_s.find(gram) == -1:
-                    str_s += " {}".format(gram)
-                flag = True
-                if cipher:
-                    str_s = str_s.replace(gram, k)
+            if ds:
+                for idx, val in enumerate(ds_values.values()):
+                    if gram_t in val:
+                        print("MATCH")
+                        print(gram_t, idx, ds[idx])
+                        if integer_labels and not flag:
+                            str_s = "{}".format(idx)
+                        elif integer_labels:
+                            idx_insert = idx
+                            if str_s.find(str(idx_insert)) == -1:
+                                str_s += ", {}".format(idx_insert)
+                            continue
+                        elif not metacaptions.empty:
+                            idx_insert = idx
+                            row = metacaptions[metacaptions['idx'].str.contains(str(idx_insert))]
+                            if not row.empty:
+                                row = row.iloc[0]
+                                for field in [row['functional_classname'], row['subclass'], row['relations_locations'], row['relations_objects'], row['relations_events']]:
+                                    if field == "":
+                                        continue
+                                    items = field.split(", ")
+                                    for item in items:
+                                        if str_s.find(item) == -1:
+                                            str_s = str_s + " " + item
+                        if simplecaptions and not flag:
+                            str_s = "An image of " + gram_t
+                        elif simplecaptions and flag and str_s.find(gram) == -1:
+                            str_s += " {}".format(gram)
+                        flag = True
+                        if cipher:
+                            str_s = str_s.replace(gram, k)
 
             elif simplecaptions and not ds:
                 d = wordnet.synsets(gram)
@@ -498,15 +503,15 @@ def get_dataset_size(shards):
 
 def get_objectnet(args, preprocess_fns):
     preprocess_train, preprocess_val = preprocess_fns
-    dataset = datasets.ImageFolder(args.objectnet, transform=preprocess_fn)
+    dataset = datasets.ImageFolder(args.objectnet, transform=preprocess_val)
     dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=args.batch_size,
             num_workers=args.workers,
-            sampler=sampler
+            sampler=None
         )
-    return DataInfo(dataloader=dataloader, sampler=sampler)
-    
+    return DataInfo(dataloader=dataloader, sampler=None)
+
 def get_imagenet(args, preprocess_fns, split):
     assert split in ["train", "val", "v2", "r", "a", "s"], "Not a recognized ImageNet split, {}".format(split)
     is_train = (split == "train")

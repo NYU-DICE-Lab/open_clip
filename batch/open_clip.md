@@ -257,7 +257,7 @@ torchrun --nproc_per_node=4 --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MA
 
 #### INFERENCE ON PRETRAINED MODEL CHECKPOINT
 
-python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1  --model=RN50  --pretrained=openai --caption-subset=True; 
+python src/training/main.py --batch-size=32 --workers=8 --objectnet "/scratch/bf996/data/objectnet-1.0/images" --zeroshot-frequency=1  --model=RN50  --pretrained=openai; 
 
 python src/training/main.py --batch-size=32 --workers=8 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1  --model=RN50  --pretrained=openai
 
