@@ -22,6 +22,7 @@ singularity \
   --overlay /scratch/bf996/singularity_containers/openclip_env_rocm_25.ext3:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \

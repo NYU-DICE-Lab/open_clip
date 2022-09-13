@@ -21,6 +21,7 @@ singularity exec --nv \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
@@ -37,6 +38,7 @@ singularity exec \
   --overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
@@ -53,6 +55,7 @@ singularity \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_rocm_25.ext3:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
@@ -72,9 +75,10 @@ pip uninstall -y -r <(pip freeze); pip install torch==1.11.0+rocm4.5.2 torchvisi
 
 singularity exec --nv \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
-  --overlay /scratch/bf996/interactive_torch/itorch.ext3:rw \
+  --overlay /scratch/bf996/interactive_torch/itorch_n.ext3:rw \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
@@ -89,7 +93,6 @@ source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src
 
 #ONE GPU
 source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/clean_open_clip/src";
 
 #MULTI-GPU
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";

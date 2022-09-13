@@ -21,6 +21,7 @@ singularity \
   --overlay /scratch/bf996/datasets/flowers-102.sqf:ro \
   --overlay /scratch/bf996/datasets/stanford_cars.sqf:ro \
   --overlay /scratch/bf996/datasets/food-101.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \

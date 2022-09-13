@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#SBATCH --output=laion-strict-intlabels-%j.log
+#SBATCH --output=laionours-strict-intlabels-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
@@ -8,7 +8,7 @@
 #SBATCH --mem=256GB
 #SBATCH --gres=gpu:4
 #SBATCH --dependency=afterany:24532856
-#SBATCH --job-name=laion-strict-intlabels
+#SBATCH --job-name=laionours-strict-intlabels
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

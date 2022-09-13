@@ -24,6 +24,7 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableD
 from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
+from clean_filter_captions import *
 
 try:
     import horovod.torch as hvd
@@ -42,7 +43,7 @@ try:
     lemmatizer = nltk.stem.WordNetLemmatizer()
 
 except:
-    print("nltk load failed, filtering not available")
+    logging.warning("nltk load failed, filtering not available")
 
 from open_clip import tokenize
 
@@ -129,7 +130,7 @@ def select_count(data, predicate, count):
 def clean_integer_label(label, singleclass, strict):
     if isinstance(label, int):
         if label < 0 or label > 999:
-            logging.info("Integer label out of acceptable range, mapping to 0")
+            logging.info("Integer label {} out of acceptable range, mapping to 0".format(label))
             label = 0
         if singleclass:
             return torch.tensor(label)
@@ -145,7 +146,7 @@ def clean_integer_label(label, singleclass, strict):
             for l in label:
                 intl = int(l)
                 if intl < 0 or intl > 999:
-                    logging.info("Integer label out of acceptable range, mapping to 0")
+                    logging.info("Integer label {} out of acceptable range, mapping to 0".format(intl))
                     label_updated.append(0)
                 else:
                     label_updated.append(intl)
@@ -179,6 +180,11 @@ class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
+        df = df[df[caption_key].notnull()]
+        df = df[df[caption_key] != "nan"]
+        if integer_labels:
+            df = df[df[caption_key] != -1]
+            df = df[df[caption_key] != "-1"]
         logging.debug("Columns of dataframe: {}".format(df.columns))
         if dscipher:
             csvcleaned=True
@@ -381,12 +387,8 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
     flag = False
     s = list(lemmatizer.lemmatize(t) for t in s.split(" "))
     str_s = " ".join(w for w in s)
-    #OR: s = str(s)
     if ds:
-        if isinstance(ds, dict):
-            ds_values = {idx:list(set([t.lower().strip() for t in row.split(", ")] + [t.lower().strip()+"s" for t in row.split(", ")] + [t.lower().strip().replace(" ", "") for t in row.split(", ")])) for idx, row in enumerate(ds.values())}
-        else:
-            ds_values = {idx:list(set([ds[idx].lower(), ds[idx].lower()+"s", ds[idx].lower().replace(" ", "")])) for idx in range(len(ds))}
+        ds_values = ds_val_getter(ds)
     for count, word in enumerate(s):
         if strict and flag:
             break
@@ -459,24 +461,6 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
         return str_s
 
     return flag
-
-def clean_captions(x):
-    import logging
-    try:
-        cleaned = str(x).lower().translate({ord(i): None for i in '&<^*>\\|+=[]~`\"@/\'\©#)("'}).translate({ord(i): " " for i in ':;-_.,!?\n'})\
-        .replace(" www ", " ").replace(" com ", " ")\
-        .replace(" flickr ", " ").replace(" st ", " street ").replace(" de ", "")\
-        .replace("http", " ").replace("href", " ")\
-        .strip()
-        c_list = list(cleaned.split(" "))
-        c_list = [c for c in c_list if (len(c) < 30 and not c.isnumeric())]
-        if len(c_list) > 50:
-            c_list = c_list[:49]
-        return " ".join(c_list)
-    except Exception as e:
-        logging.info("Exception in clean captions: ")
-        logging.info(e)
-        return ""
 
 def get_dataset_size(shards):
     shards_list = list(braceexpand.braceexpand(shards))
@@ -610,7 +594,7 @@ def filter_no_caption(sample):
 
 def filter_no_caption_text(sample):
     if 'text' not in sample:
-        print("Text not in sample")
+        logging.warning("Text not in sample")
         return False
     elif sample["text"] == "":
         return False
