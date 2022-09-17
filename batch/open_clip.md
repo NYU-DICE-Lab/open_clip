@@ -15,15 +15,18 @@ pip install -r requirements-training.txt;
 ```bash
 cd /scratch/bf996/open_clip
 
-singularity exec --nv \
+singularity \
+  exec $nv \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
+  --overlay /scratch/bf996/datasets/in100.sqf:ro \
+  --overlay /scratch/bf996/datasets/laion100.sqf:ro \
+  --overlay /scratch/bf996/datasets/openimages100.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
-  --overlay /scratch/bf996/datasets/in100.sqf \
-  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
-  --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
   /scratch/work/public/singularity/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
   /bin/bash
 ```
@@ -38,7 +41,9 @@ singularity exec \
   --overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
-  --overlay /scratch/bf996/datasets/in100.sqf \
+  --overlay /scratch/bf996/datasets/in100.sqf:ro \
+  --overlay /scratch/bf996/datasets/laion100.sqf:ro \
+  --overlay /scratch/bf996/datasets/openimages100.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-train.sqf:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
@@ -55,7 +60,9 @@ singularity \
   $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
   --overlay /scratch/bf996/singularity_containers/openclip_env_rocm_25.ext3:ro \
   --overlay /vast/work/public/ml-datasets/imagenet/imagenet-val.sqf:ro \
-  --overlay /scratch/bf996/datasets/in100.sqf \
+  --overlay /scratch/bf996/datasets/in100.sqf:ro \
+  --overlay /scratch/bf996/datasets/laion100.sqf:ro \
+  --overlay /scratch/bf996/datasets/openimages100.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
   --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
@@ -96,9 +103,6 @@ source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src
 
 #MULTI-GPU
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK; export MASTER_PORT=$(shuf -i 10000-65500 -n 1); export MASTER_ADDR="$(hostname -s).hpc.nyu.edu"; source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/open_clip/src";
-
-#CLEAN OPE NCLIP
-source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:/scratch/bf996/clean_open_clip/src";
 ```
 
 ### DEBUG
@@ -507,3 +511,11 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb --imag
 python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-strict-ep1-64/checkpoints/epoch_46.pt" --caption-subset=True; python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-strict-ep1-64/checkpoints/epoch_46.pt"; python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-strict-ep1-64/checkpoints/epoch_50.pt" --caption-subset=True; python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-strict-ep1-64/checkpoints/epoch_50.pt";
 
 python src/training/main.py --batch-size=32 --workers=8 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-ep1-64/checkpoints/epoch_64.pt";
+
+### new yfcc
+
+/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata-subset-matched.csv
+
+idx_openai_strict
+
+idx_openai_multi

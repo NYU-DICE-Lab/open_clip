@@ -1,5 +1,6 @@
 import nltk
 from nltk.corpus import stopwords, wordnet
+from fuzzywuzzy import fuzz
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('omw-1.4')
@@ -45,7 +46,7 @@ def ds_val_getter(ds):
         ds_values = {idx:list(set([ds[idx].lower().strip(), reverse_words(ds[idx].lower().strip()), ds[idx].lower().strip()+"s", ds[idx].lower().strip().replace(" ", ""), reverse_words(ds[idx].lower().strip()).replace(" ", "")])) for idx in range(len(ds))}
     return ds_values
 
-def in1k_hard_subset_match(s, ds, ngram=3, multiclass=False, strict=False):
+def in1k_hard_subset_match(s, ds, ngram=3, multiclass=False, strict=False, fuzzy=0):
     s = str(s)
     if s == "":
         return -1
@@ -63,12 +64,13 @@ def in1k_hard_subset_match(s, ds, ngram=3, multiclass=False, strict=False):
     for gram in grams:
         for idx, val in enumerate(ds_values.values()):
             if gram in val:
-                #print("Match {}, {}".format(gram, val))
                 if multiclass or strict:
                     matches.append(idx)
                 else:
                     return idx
-    
+            elif fuzzy > 0:
+                if fuzz.ratio(gram,val) > fuzzy:
+                    matches.append(idx)   
     if matches == []:
         return -1
     elif strict and len(matches) != 1:
