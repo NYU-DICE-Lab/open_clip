@@ -115,6 +115,12 @@ def parse_args():
         help="Scramble token ordering of captions during training"
     )
     parser.add_argument(
+        "--token-strip",
+        type=bool,
+        default=False,
+        help="Strip tokens not in evaluation dataset during training"
+    )
+    parser.add_argument(
         "--extended-metrics",
         type=bool,
         default=False,

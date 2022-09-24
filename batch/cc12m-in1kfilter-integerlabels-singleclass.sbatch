@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=47:59:00
-#SBATCH --mem=384GB
+#SBATCH --mem=192GB
 #SBATCH --gres=gpu:mi50:8
 #SBATCH --job-name=cc12m-intlabels
 #SBATCH --dependency=afterany:22820616

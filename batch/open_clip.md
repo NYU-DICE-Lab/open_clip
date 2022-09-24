@@ -512,6 +512,12 @@ python src/training/main.py --batch-size=32 --workers=8 --report-to wandb  --ima
 
 python src/training/main.py --batch-size=32 --workers=8 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --resume "/scratch/bf996/open_clip/logs/yfcc-RN50-in1k-ep1-64/checkpoints/epoch_64.pt";
 
+python src/training/main.py --batch-size=32 --report-to wandb --workers=8 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --model=RN50 --caption-subset=True --resume "/scratch/bf996/open_clip/logs/in100+laion100-titletagdescr-ep1-256/checkpoints/epoch_200.pt";
+
+python src/training/main.py --batch-size=32 --report-to wandb --workers=8 --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --imagenet-s "/imagenet-sketch" --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --zeroshot-frequency=1 --integer-labels --model=RN50-in1k  --resume "/scratch/bf996/open_clip/logs/yfcc-in1k-default-integerlabels-multiclass-ep62-64/checkpoints/epoch_64.pt";
+
+
+
 ### new yfcc
 
 /scratch/bf996/datasets/yfcc15m/yfcc-small-metadata-subset-matched.csv

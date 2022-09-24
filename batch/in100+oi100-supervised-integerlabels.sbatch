@@ -1,13 +1,13 @@
 #!/bin/bash -x
 
-#SBATCH --output=in100+oai100-sup-int-%j.log
+#SBATCH --output=in100+oi100-sup-int-%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
 #SBATCH --mem=128GB
 #SBATCH --gres=gpu:4
-#SBATCH --job-name=in100+oai100-sup-int
+#SBATCH --job-name=in100+oi100-sup-int
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=bf996@nyu.edu
 

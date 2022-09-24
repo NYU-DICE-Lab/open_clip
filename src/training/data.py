@@ -127,7 +127,16 @@ def select_count(data, predicate, count):
             count = count + 1
             yield sample
 
+def token_strip_func(texts):
+    ok_tokens = set(ast.literal_eval(open("/scratch/bf996/open_clip/metadata/in1k_ds_oai_tokens.txt", 'r').read()))
+    tlist = texts.tolist()
+    texts = [t if t in ok_tokens else 0 for t in tlist]
+    texts = torch.tensor(tlist)
+    return texts
+
 def clean_integer_label(label, singleclass, strict):
+    if isinstance(label, float):
+        label = int(label)
     if isinstance(label, int):
         if label < 0 or label > 999:
             logging.info("Integer label {} out of acceptable range, mapping to 0".format(label))
@@ -173,11 +182,11 @@ def clean_integer_label(label, singleclass, strict):
                 return ""
         return torch.tensor(label)
     else:
-        logging.warning("Expected single or multi integer label, got {} -- ignoring")
+        logging.warning("Expected string or int or float, got {} -- ignoring".format(type(label)))
         return ""
 
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, tokenscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions, token_strip, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         df = df[df[caption_key].notnull()]
@@ -217,6 +226,7 @@ class CsvDataset(Dataset):
         self.integer_labels = integer_labels
         self.multiclass = multiclass
         self.strict = strict
+        self.token_strip = token_strip
         logging.debug('Done loading data')
 
     def __len__(self):
@@ -251,6 +261,8 @@ class CsvDataset(Dataset):
         if self.scrambled:
             texts = scramble_txt(texts)
         texts = tokenize(texts)[0]
+        if self.token_strip:
+            texts = token_strip_func(texts)
         if self.token_scrambled:
             #logging.info("before: {}".format(texts))
             random.shuffle(texts)
@@ -261,8 +273,8 @@ def _convert_to_rgb(image):
     return image.convert('RGB')
     
 class ImageAugCSVDataset(CsvDataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep="\t"):
-        super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, sep)
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, token_strip, sep="\t"):
+        super().__init__(input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, dscipher, simplecaptions, strict, shift, integer_labels, metacaptions, token_strip, sep)
         self.augment = torchvision.transforms.Compose([
             torchvision.transforms.RandomResizedCrop(224, scale=(0.08, 1.)),
             torchvision.transforms.RandomApply([
@@ -323,11 +335,13 @@ class DataInfo:
             self.sampler.set_epoch(epoch)
 
 
-def preprocess_txt(text, token_scrambled):
+def preprocess_txt(text, token_scrambled, token_strip):
     text = str(text)
     tokentxt = tokenize([text])[0]
     if token_scrambled:
         random.shuffle(tokentxt)
+    if token_strip:
+        text = token_strip_func(text)
     return tokentxt
 
 def filter_preprocess_txt(text, ds, scrambled, dscipher, simplecaptions, strict, shift, integer_labels, multiclass, metacaptions):
@@ -388,7 +402,7 @@ def synset_ds(s, ngram=3, ds=None, cipher=False, simplecaptions=False, strict=Fa
     s = list(lemmatizer.lemmatize(t) for t in s.split(" "))
     str_s = " ".join(w for w in s)
     if ds:
-        ds_values = ds_val_getter(ds)
+        ds_values = ds_val_getter(ds, False)
     for count, word in enumerate(s):
         if strict and flag:
             break
@@ -875,7 +889,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
         ])
     else:
         pipeline.extend([
-            wds.map_dict(image=preprocess_img, text=lambda x : preprocess_txt(x, args.token_scrambled), handler=log_and_continue),
+            wds.map_dict(image=preprocess_img, text=lambda x : preprocess_txt(x, args.token_scrambled, args.token_strip), handler=log_and_continue),
         ])
     pipeline.extend([
         wds.to_tuple("image", "text"),
@@ -955,6 +969,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
             csvfilter=args.ds_filter,
             csvscrambled=args.csv_scrambled,
             tokenscrambled=args.token_scrambled,
+            token_strip=args.token_strip,
             csvcleaned=args.csv_cleaned,
             dscipher=args.ds_cipher,
             simplecaptions=args.simplecaptions,
