@@ -12,6 +12,7 @@ ftfy
 tqdm
 pandas
 braceexpand
+huggingface_hub
 tensorboard
 timm
 wandb

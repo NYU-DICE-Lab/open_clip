@@ -44,7 +44,7 @@ def parse_args():
     )
     parser.add_argument(
         "--dataset-type",
-        choices=["webdataset", "csv", "auto"],
+        choices=["webdataset", "csv", "synthetic", "auto"],
         default="auto",
         help="Which type of dataset to process."
     )
@@ -325,7 +325,7 @@ def parse_args():
     )
     parser.add_argument(
         "--precision",
-        choices=["amp", "fp16", "fp32"],
+        choices=["amp", "amp_bfloat16", "fp16", "fp32"],
         default="amp",
         help="Floating point precision."
     )
@@ -340,9 +340,6 @@ def parse_args():
         default='',
         type=str,
         help="Use a pretrained CLIP model weights with the specified tag or file path.",
-    )
-    parser.add_argument(
-        "--norm_gradient_clip", type=float, default=None, help="Gradient clip."
     )
     parser.add_argument(
         "--pretrained-image",
@@ -436,6 +433,12 @@ def parse_args():
         help="Freeze BatchNorm running stats in image tower for any locked layers.",
     )
     parser.add_argument(
+        '--image-mean', type=float, nargs='+', default=None, metavar='MEAN',
+        help='Override default image mean value of dataset')
+    parser.add_argument(
+        '--image-std', type=float, nargs='+', default=None, metavar='STD',
+        help='Override default image std deviation of of dataset')
+    parser.add_argument(
         "--grad-checkpointing",
         default=False,
         action='store_true',
@@ -492,9 +495,6 @@ def parse_args():
         default='',
         type=str,
         help="Notes if logging with wandb"
-    )
-    parser.add_argument(
-        "--C", type=float, default=3.16, help="inverse regularizer for logistic reg."
     )
     parser.add_argument(
         "--debug",
@@ -585,6 +585,9 @@ def parse_args():
         "--image_ssl_loss_weight",
         type=float, default=.05,
         help="use masked language learning (MLM) on text (DeCLIP)",
+    )
+    parser.add_argument(
+        "--norm_gradient_clip", type=float, default=None, help="Gradient clip."
     )
     args = parser.parse_args()
 

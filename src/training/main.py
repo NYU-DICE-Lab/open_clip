@@ -49,6 +49,14 @@ def random_seed(seed=42, rank=0):
 def main():
     args = parse_args()
     eval_datasets = ['val', 'imagenet-val', 'imagenet-v2', 'inat2021', 'stanfordcars', 'imagenet-s', 'imagenet-r', 'imagenet-a', 'flowers', 'air', 'food', 'objectnet']
+    if torch.cuda.is_available():
+        # This enables tf32 on Ampere GPUs which is only 8% slower than
+        # float16 and almost as accurate as float32
+        # This was a default in pytorch until 1.12
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.deterministic = False
+
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace('/', '-')
     os.environ["WDS_VERBOSE_CACHE"] = "1"
@@ -91,8 +99,6 @@ def main():
     setup_logging(args.log_path, args.log_level)
 
     # fully initialize distributed device environment
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cudnn.deterministic = False
     device = init_distributed_device(args)
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
@@ -109,7 +115,7 @@ def main():
     if args.copy_codebase:
         copy_codebase(args)
 
-    assert args.precision in ['amp', 'fp16', 'fp32']
+    assert args.precision in ['amp', 'amp_bfloat16', 'fp16', 'fp32']
 
     if args.precision == 'fp16':
         logging.warning(
@@ -151,7 +157,9 @@ def main():
             mlm=args.mlm,
             simclr=args.sim_clr,
             simclr_trans=args.sim_clr_trans,
-            imsize=args.image_size if args.image_size else 224
+            imsize=args.image_size if args.image_size else 224,
+            image_mean=args.image_mean,
+            image_std=args.image_std,
         )
 
     if any([args.filip, args.mlm, args.vssl, args.elp, args.dcl]):
@@ -201,7 +209,7 @@ def main():
     # create optimizer and scaler
     optimizer = None
     scaler = None
-    if args.train_data or args.schema:
+    if args.train_data or args.schema or args.dataset_type == "synthetic":
         if args.schema:
             args.schemas = ast.literal_eval(open(args.schema, 'r').read())
         assert not args.trace, 'Cannot train with traced model'
@@ -233,7 +241,7 @@ def main():
     start_epoch = 0        
     if args.resume is not None:
         if os.path.isfile(args.resume):
-            checkpoint = torch.load(args.resume, map_location=device)
+            checkpoint = torch.load(args.resume, map_location='cpu')
             sd = checkpoint["state_dict"]
             if args.add_trunk:
                 keys = list(sd.keys())
@@ -296,6 +304,7 @@ def main():
         # you will have to configure this for your project!
         wandb.init(
             project="open-clip",
+            name=args.name,
             notes=args.wandb_notes,
             tags=[],
             config=vars(args),

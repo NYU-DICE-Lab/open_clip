@@ -21,6 +21,7 @@ from open_clip import ClipLoss, tokenize, SIMCLRLoss, IntLoss
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 from .data import get_total_obj
+from .precision import get_autocast
 
 from grad_cache_vl.grad_cache import GradCache
 
@@ -54,7 +55,8 @@ def train_integer_labels(model, images, labels, device, loss):
 
 def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None, sim_clr=False):
     device = torch.device(args.device)
-    autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
+    autocast = get_autocast(args.precision)
+
     model.train()
     #TODO: implement temperature for SIMCLR
     if sim_clr:
@@ -280,7 +282,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
                 f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
                 f"Data (t): {data_time_m.avg:.3f} "
-                f"Batch (t): {batch_time_m.avg:.3f} "
+                f"Batch (t): {batch_time_m.avg:.3f}, {args.batch_size*args.world_size / batch_time_m.val:#g}/s "
                 f"LR: {optimizer.param_groups[0]['lr']:5f} "
                 f"Logit Scale: {logit_scale_scalar:.3f}"
             )
@@ -290,6 +292,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 "loss": loss_m.val,
                 "data_time": data_time_m.val,
                 "batch_time": batch_time_m.val,
+                "samples_per_scond": args.batch_size*args.world_size / batch_time_m.val,
                 "scale":  logit_scale_scalar,
                 "lr": optimizer.param_groups[0]["lr"]
             }
@@ -329,7 +332,9 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
     metrics.update(zero_shot_metrics)
 
-    autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
+    autocast = get_autocast(args.precision)
+
+    
     if 'val' in data and (args.val_frequency and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)):
         dataloader = data['val'].dataloader
         num_samples = 0

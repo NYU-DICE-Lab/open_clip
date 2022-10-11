@@ -603,8 +603,8 @@ def count_samples(dataloader):
     return n_elements, n_batches
 
 
-def filter_no_caption(sample):
-    return 'txt' in sample
+def filter_no_caption_or_no_image(sample):
+    return ('txt' in sample) and ('png' in sample or 'jpg' in sample)
 
 def filter_no_caption_text(sample):
     if 'text' not in sample:
@@ -868,7 +868,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, total=
             wds.tarfile_to_samples(handler=log_and_continue),
         ])
     pipeline.extend([
-        wds.select(filter_no_caption),
+        wds.select(filter_no_caption_or_no_image),
         wds.decode("pilrgb", handler=log_and_continue),
         wds.rename(image="jpg;png", text="txt"),
     ])
@@ -996,12 +996,53 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, total=None):
     dataloader.num_batches = len(dataloader)
     return DataInfo(dataloader, sampler)
 
+class SyntheticDataset(Dataset):
+
+    def __init__(self, transform=None, image_size=(224, 224), caption="Dummy caption", dataset_size=100):
+        self.transform = transform
+        self.image_size = image_size
+        self.caption = caption
+        self.image = Image.new('RGB', image_size)
+        self.dataset_size = dataset_size
+
+    def __len__(self):
+        return self.dataset_size
+
+    def __getitem__(self, idx):
+        if self.transform is not None:
+            image = self.transform(self.image)
+        return image, preprocess_txt(self.caption)
+
+
+def get_synthetic_dataset(args, preprocess_fn, is_train, epoch=0):
+    image_size = preprocess_fn.transforms[0].size
+    dataset = SyntheticDataset(
+        transform=preprocess_fn, image_size=image_size, dataset_size=args.train_num_samples)
+    num_samples = len(dataset)
+    sampler = DistributedSampler(dataset) if args.distributed and is_train else None
+    shuffle = is_train and sampler is None
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=args.workers,
+        pin_memory=True,
+        sampler=sampler,
+        drop_last=is_train,
+    )
+    dataloader.num_samples = num_samples
+    dataloader.num_batches = len(dataloader)
+
+    return DataInfo(dataloader, sampler)
 
 def get_dataset_fn(data_path, dataset_type):
     if dataset_type == "webdataset":
         return get_wds_dataset
     elif dataset_type in ["csv"]:
         return get_csv_dataset
+    elif dataset_type == "synthetic":
+        return get_synthetic_dataset
     elif dataset_type == "auto":
         ext = data_path.split('.')[-1]
         if ext in ['csv', 'tsv']:
@@ -1042,7 +1083,7 @@ def get_data(args, preprocess_fns, epoch=0):
         else:
             args.metacaptions = pd.DataFrame()
 
-    if args.train_data:
+    if args.train_data or args.dataset_type == "synthetic":
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, preprocess_train, is_train=True, epoch=epoch, total=total)
     elif args.schema:

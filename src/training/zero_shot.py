@@ -1,6 +1,5 @@
 import logging
 import random
-from contextlib import suppress
 
 import torch
 from torch import einsum
@@ -10,6 +9,8 @@ from tqdm import tqdm
 import numpy as np
 
 from open_clip import tokenize
+from .precision import get_autocast
+from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template
 
 from .data import shift_cipher
 
@@ -90,8 +91,9 @@ def accuracy(output, target, topk=(1,)):
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
-def run(model, classifier, dataloader, args, idx=None, split=None):
-    autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
+
+def run(model, classifier, dataloader, args):
+    autocast = get_autocast(args.precision)
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
         args.y_pred = []

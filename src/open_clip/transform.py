@@ -8,6 +8,8 @@ import torchvision
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
     CenterCrop
 
+from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
+
 
 class ResizeMaxSize(nn.Module):
 
@@ -48,8 +50,14 @@ def image_transform(
         resize_longest_max: bool = False,
         fill_color: int = 0,
 ):
-    mean = mean or (0.48145466, 0.4578275, 0.40821073)  # OpenAI dataset mean
-    std = std or (0.26862954, 0.26130258, 0.27577711)  # OpenAI dataset std
+    mean = mean or OPENAI_DATASET_MEAN
+    if not isinstance(mean, (list, tuple)):
+        mean = (mean,) * 3
+
+    std = std or OPENAI_DATASET_STD
+    if not isinstance(std, (list, tuple)):
+        std = (std,) * 3
+
     if isinstance(image_size, (list, tuple)) and image_size[0] == image_size[1]:
         # for square size, pass size as int so that Resize() uses aspect preserving shortest edge
         image_size = image_size[0]
