@@ -92,7 +92,7 @@ def accuracy(output, target, topk=(1,)):
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
 
 
-def run(model, classifier, dataloader, args):
+def run(model, classifier, dataloader, args, idx=None, split=None):
     autocast = get_autocast(args.precision)
     with torch.no_grad():
         top1, top5, n = 0., 0., 0.
