@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import logging
+from torch.autograd import Variable
 
 try:
     import torch.distributed.nn
@@ -236,3 +237,6 @@ class IntLoss(nn.Module):
         else:
             loss = F.cross_entropy(logits, labels)
         return loss
+
+    #Other interesting loss functions
+    #https://github.com/clcarwin/focal_loss_pytorch/blob/master/focalloss.py

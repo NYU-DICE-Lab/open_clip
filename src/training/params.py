@@ -380,6 +380,11 @@ def parse_args():
         help="Use simclr loss",
     )
     parser.add_argument(
+        "--byol",
+        default=False,
+        help="Use byol loss",
+    )
+    parser.add_argument(
         "--sim-clr-trans",
         default=False,
         help="Use simclr image transforms",

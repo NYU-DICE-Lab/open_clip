@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=8
 #SBATCH --time=47:59:00
-#SBATCH --mem=192GB
+#SBATCH --mem=256GB
 #SBATCH --gres=gpu:mi50:8
 #SBATCH --wait-all-nodes=1
 #SBATCH --job-name=yfcc-tokenstrip

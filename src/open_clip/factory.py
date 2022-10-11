@@ -18,8 +18,6 @@ from .transform import image_transform
 
 try:
     from coca_pytorch.coca_pytorch import CoCa
-    # from vit_pytorch import ViT
-    # from vit_pytorch.extractor import Extractor
 except:
     logging.debug("coca-pytorch is not installed")
 
@@ -218,8 +216,8 @@ def create_model(
             multimodal_depth = 6,          # depth of the multimodal transformer
             dim_head = 64,                 # dimension per attention head
             heads = 8,                     # number of attention heads
-            caption_loss_weight = .8,      # weight on the autoregressive caption loss
-            contrastive_loss_weight = .7,  # weight on the contrastive loss between image and text CLS embeddings
+            caption_loss_weight = .5,      # weight on the autoregressive caption loss
+            contrastive_loss_weight = .4,  # weight on the contrastive loss between image and text CLS embeddings
         )
         if precision == "amp" or precision == "fp32":
             model = model.float()

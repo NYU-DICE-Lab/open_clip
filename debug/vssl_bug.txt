@@ -1,0 +1,13 @@
+python -u /scratch/bf996/open_clip/src/training/main.py --train-data="/scratch/bf996/datasets/yfcc15m/yfcc-small-metadata.csv" --csv-separator "," --zeroshot-frequency=8 --imagenet-a "/imagenet-a" --imagenet-r "/imagenet-r" --imagenet-val "/imagenet/val/" --imagenet-v2 "/scratch/bf996/datasets" --save-frequency 1 --warmup 2000 --batch-size=128 --precision=fp32 --norm_gradient_clip=5e4 --epochs=32 --workers=4 --model="xclip" --vssl=True
+
+2022-09-24,06:53:03 | INFO | Running with a single process. Device cuda:0.
+Traceback (most recent call last):
+  File "/scratch/bf996/open_clip/src/training/main.py", line 395, in <module>
+    main()
+  File "/scratch/bf996/open_clip/src/training/main.py", line 139, in main
+    model, preprocess_train, preprocess_val = create_model_and_transforms(
+  File "/scratch/bf996/open_clip/src/open_clip/factory.py", line 325, in create_model_and_transforms
+    if model_name == "coca" or simclr or isinstance(model.visual, (SIMCLR, timm.models.vision_transformer.VisionTransformer)):
+  File "/ext3/miniconda3/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1185, in __getattr__
+    raise AttributeError("'{}' object has no attribute '{}'".format(
+AttributeError: 'CLIP' object has no attribute 'visual'

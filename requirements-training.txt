@@ -1,6 +1,7 @@
 open_clip_torch
 coca-pytorch
 vit-pytorch
+byol-pytorch
 fuzzywuzzy[speedup]
 x-clip
 torch>=1.9.0

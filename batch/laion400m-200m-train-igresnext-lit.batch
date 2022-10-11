@@ -25,4 +25,4 @@ export MASTER_ADDR="$(hostname -s).hpc.nyu.edu";
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{01500..41500}.tar" --train-num-samples 400000000 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=timm-igresnext32x48 --norm_gradient_clip=5e4 --pretrained-image --lock-image --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{01500..41500}.tar" --train-num-samples 180000000 --save-frequency 1 --warmup 2000 --batch-size=128 --epochs=32 --workers=8 --model=timm-igresnext32x48 --norm_gradient_clip=5e4 --resume "/scratch/bf996/open_clip/logs/laion400m-180mtrain-igresnext-lit-ep1/checkpoints/epoch_1.pt" --pretrained-image --lock-image --local-loss --gather-with-grad'
