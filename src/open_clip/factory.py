@@ -321,21 +321,23 @@ def create_model_and_transforms(
         mlm: bool = False,
         image_simclr: bool = False,
         simclr_trans: bool = False,
-        imsize: int = 224
+        imsize: int = 224,
         cache_dir: Optional[str] = None,
+        image_mean = None,
+        image_std = None,
 ):
     model = create_model(
     model_name, pretrained, precision, device, jit,
     force_quick_gelu=force_quick_gelu,
-    pretrained_image=pretrained_image, filip=filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize, simclr=simclr, cache_dir=cache_dir
+    pretrained_image=pretrained_image, filip=image_filip, dcl=dcl, elp=elp, vssl=vssl, mlm=mlm, imsize=imsize, simclr=image_simclr, cache_dir=cache_dir
     )
     #FIXME hardcoded size
     image_mean = image_mean or getattr(model.visual, 'image_mean', None)
     image_std = image_std or getattr(model.visual, 'image_std', None)
-    if model_name == "coca" or simclr or isinstance(model.visual, (SIMCLR, timm.models.vision_transformer.VisionTransformer)):
+    if model_name == "coca" or image_simclr or isinstance(model.visual, (SIMCLR, timm.models.vision_transformer.VisionTransformer)):
         preprocess_train = image_transform(224, is_train=True, mean=image_mean, std=image_std, simclr_trans=simclr_trans)
         preprocess_val = image_transform(224, is_train=False, mean=image_mean, std=image_std, simclr_trans=simclr_trans)
-    elif model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
+    elif model_name == "xclip" or any([image_filip, mlm, vssl, elp, dcl]):
         preprocess_train = image_transform(model.image_size, is_train=True, mean=image_mean, std=image_std, simclr_trans=simclr_trans)
         preprocess_val = image_transform(model.image_size, is_train=False, mean=image_mean, std=image_std, simclr_trans=simclr_trans)
     else:

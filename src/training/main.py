@@ -150,12 +150,12 @@ def main():
             jit=args.torchscript,
             force_quick_gelu=args.force_quick_gelu,
             pretrained_image=args.pretrained_image,
-            filip=args.filip,
+            image_filip=args.filip,
             dcl=args.dcl,
             elp=args.elp,
             vssl=args.vssl,
             mlm=args.mlm,
-            simclr=args.sim_clr,
+            image_simclr=args.sim_clr,
             simclr_trans=args.sim_clr_trans,
             imsize=args.image_size if args.image_size else 224,
             image_mean=args.image_mean,
@@ -241,7 +241,7 @@ def main():
     start_epoch = 0        
     if args.resume is not None:
         if os.path.isfile(args.resume):
-            checkpoint = torch.load(args.resume, map_location='cpu')
+            checkpoint = torch.load(args.resume, map_location=device)
             sd = checkpoint["state_dict"]
             if args.add_trunk:
                 keys = list(sd.keys())

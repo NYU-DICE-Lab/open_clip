@@ -113,6 +113,5 @@ def init_distributed_device(args):
     else:
         device = 'cpu'
     args.device = device
-    print(args.device)
     device = torch.device(device)
     return device
