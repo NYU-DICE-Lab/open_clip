@@ -25,9 +25,9 @@ singularity \
   --overlay /scratch/bf996/datasets/in100.sqf:ro \
   --overlay /scratch/bf996/datasets/laion100.sqf:ro \
   --overlay /scratch/bf996/datasets/openimages100.sqf:ro \
-  --overlay /scratch/bf996/datasets/imagenet-r.sqf:ro \
-  --overlay /scratch/bf996/datasets/imagenet-a.sqf:ro \
-  --overlay /scratch/bf996/datasets/imagenet-sketch.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/bf996/imagenet-r.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/bf996/imagenet-a.sqf:ro \
+  --overlay /vast/work/public/ml-datasets/bf996/imagenet-sketch.sqf:ro \
   /scratch/work/public/singularity/rocm5.1.1-ubuntu20.04.4.sif \
   /bin/bash -c "
  source /ext3/env.sh
